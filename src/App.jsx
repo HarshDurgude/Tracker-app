@@ -1,15 +1,31 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [tasks, setTasks] = useState([]);
+  const [input, setInput] = useState("");
 
   return (
     <>
-      <p>hello world</p>
+      <input type="text" 
+      value={input} 
+      onChange={(e) => {
+        setInput(e.target.value); 
+      }}/>
+      <button
+        onClick={()=>{
+          setTasks([...tasks,{title:input,status:false}])
+        }}
+      >Add Task</button>
+
+        {
+          tasks.map((task) =>{
+            console.log(tasks);
+            return <p>{task.title}</p>
+          }
+          )
+        }
+      
     </>
   )
 }
