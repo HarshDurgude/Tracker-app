@@ -7,21 +7,25 @@ function TaskItem({ task, toggleTask, deleteTask, dropped }) {
         listeners,
         setNodeRef,
         transform,
-        transition,
-        isDragging
-    } = useSortable({ id: task.id });
-    const style = {
+        transition
+    } = useSortable({ id: task.id }); // hook which gives diff utilities for drag and drop
+
+    const style = { // handles dragging, movement and translate animation using dynamic css
         transform: CSS.Transform.toString(transform),
         transition: dropped ? "none" : transition,
     };
     return (
-        <div ref={setNodeRef} style={style}
+        <div
+            ref={setNodeRef} // marking this div as dragable and telling that to dnd kit
+            style={style}
         >
 
             <div className='flex  gap-2 items-center' key={task.id}>
                 <div
                     className="touch-none"
+                    // for making this div the drag control point
                     {...listeners}
+                    // for realiable dragging
                     {...attributes}
                 >
                     ::

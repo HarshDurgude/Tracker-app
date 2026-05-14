@@ -1,45 +1,43 @@
 import { useState } from 'react'
+import React from 'react'
 import './App.css'
+
+// dnd imports
 import {
   SortableContext,
-  arrayMove,
-  verticalListSortingStrategy
+  arrayMove
 } from "@dnd-kit/sortable";
 import { DndContext } from "@dnd-kit/core";
 
+// custom hooks and components
 import TaskItem from './components/TaskItem';
-
+import useTasks from './hooks/useTasks'
 
 function App() {
-  const [dropped, setDropped] = useState();
-  const [tasks, setTasks] = useState([]);
   const [input, setInput] = useState("");
 
-  function addTask() {
-    if (input.trim() !== "") {
-      setTasks([...tasks, { id: Date.now(), title: input, status: false }]);
-      // ... --> it is called spread oprator, works just as it looks
-      setInput("");
-    }
-  }
-  function deleteTask(id) {
-    setTasks(tasks.filter((task, i) => (task.id !== id)));
-    // react prefers creating new arrays instead of modifiying old ones for state change
-    // filter creates new array
-  }
-
-  function toggleTask(id) {
-    setTasks(tasks.map((t) => (t.id === id) ? { ...t, status: !t.status } : t))
-  }
+  const {
+    tasks,
+    dropped,
+    addTask,
+    deleteTask,
+    toggleTask,
+    handleDragEnd,
+    handleDragStart
+  } = useTasks(); // custom hook created to handle all task related logic
 
   return (
     <>
       <div className='m-4 flex flex-col items-center'>
         {/* made the div into form and moved add task logic to onsubmit, so that pressing enter also creates the task in todo list */}
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          addTask();
-        }} className='flex gap-1  *:border-2 *:rounded-md *:py-2 *:px-4'>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault(); // to prevent browse from refreshing and prevent other random behavior on form submit
+            addTask(input);
+            setInput(""); // clearing input field after adding new input
+          }}
+          className='flex gap-1  *:border-2 *:rounded-md *:py-2 *:px-4'
+        >
           <input
             className='w-64'
             type="text"
@@ -54,22 +52,19 @@ function App() {
         </form>
 
 
-        <div className='h-full bg-amber-200' >
-          <DndContext
+        <div className='m-2'>
+          <DndContext // defines the context of drag an drop area
 
-            // sensors={sensors}
-            onDragStart={() => setDropped(false)}
-            onDragEnd={(event) => {
-              setTasks(arrayMove(tasks, tasks.findIndex(t => t.id === event.active.id), tasks.findIndex(t => t.id === event.over.id)))
-              setDropped(true)
-            }}
+            onDragStart={() => handleDragStart()}
+            onDragEnd={(event) => handleDragEnd(event)}
           >
 
-            <SortableContext
+            <SortableContext // defines the items which will be used for drag and drop
               items={tasks.map(task => task.id)}
-              strategy={verticalListSortingStrategy}
+
 
             >
+
               {tasks.map((task) => (
                 <TaskItem
                   task={task}
@@ -80,12 +75,10 @@ function App() {
                 />
               ))}
 
-
             </SortableContext>
 
           </DndContext>
         </div>
-
 
       </div>
     </>
