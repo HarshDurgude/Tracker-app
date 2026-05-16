@@ -12,15 +12,16 @@ function TaskItem({ task, toggleTask, deleteTask, dropped }) {
 
     const style = { // handles dragging, movement and translate animation using dynamic css
         transform: CSS.Transform.toString(transform),
-        transition: dropped ? "none" : transition,
+        transition: dropped ? "none" : transition, // workaround to fix the gitter/glich
     };
     return (
         <div
+
             ref={setNodeRef} // marking this div as dragable and telling that to dnd kit
             style={style}
         >
 
-            <div className='flex  gap-2 items-center' key={task.id}>
+            <div className='flex  gap-2 items-center' >
                 <div
                     className="touch-none"
                     // for making this div the drag control point
