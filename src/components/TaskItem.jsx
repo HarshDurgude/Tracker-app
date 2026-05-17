@@ -56,8 +56,4 @@ function TaskItem({ task, toggleTask, deleteTask, dropped }) {
     )
 }
 
-
-
-
-
 export default TaskItem

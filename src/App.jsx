@@ -16,13 +16,14 @@ import TaskItem from './components/TaskItem';
 import useTasks from './hooks/useTasks';
 
 function App() {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(""); // this runs at every render of App but only sets value to "" at the first render other times it uses the state
+  // and also hooks should run in same order every render, so conditional hooks create problems
 
 
   const {
     tasks,
     dropped,
-    loading,
+    syncing,
     addTask,
     deleteTask,
     toggleTask,
@@ -56,7 +57,8 @@ function App() {
           >Add </button>
         </form>
 
-        <span className='text-xs'>{loading ? "syncing..." : ""}</span>
+        <span className='text-xs' // syncing... text
+        >{syncing ? "syncing..." : ""}</span>
 
         <div className='m-2'>
           <DndContext // defines the context of drag an drop area
