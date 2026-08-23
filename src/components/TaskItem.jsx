@@ -23,7 +23,7 @@ function TaskItem({ task, toggleTask, deleteTask, dropped }) {
 
             <div className='flex  gap-2 items-center' >
                 <div
-                    className="touch-none"
+                    className="p-1 bg-gray-100 rounded-sm touch-none hover:bg-gray-200 hover:cursor-pointer"
                     // for making this div the drag control point
                     {...listeners}
                     // for realiable dragging
