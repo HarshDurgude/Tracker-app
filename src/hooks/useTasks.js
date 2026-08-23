@@ -38,16 +38,14 @@ function useTasks() {
             );
             // using await cause database query takes time 
             const querySnapshot = await getDocs(q); // this returns a querySnapshot
-            // querySnapshot.docs contains the array which has our task list data in order
-            // to acces that data each element in querySnapshot.docs, each element has a 
-            // function .data() --> (returns task object containing all data fields)
-            const loadedTasks = querySnapshot.docs.map((doc) => (
-                {
-                    ...doc.data()
-                }
-            ));
+            // querySnapshot.docs contains the array which has our all task list data, in order
+            // to access that data each element in querySnapshot.docs has a 
+            // function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields, 
+            // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
 
-            setTasks(loadedTasks); // fetching tasks from db and rendering
+            const loadedTasks = querySnapshot.docs.map((doc) => (doc.data())); // getting tasks into the local variable from firebase one by one using map
+
+            setTasks(loadedTasks); // updating the tasks state variable
 
             console.log("LOADING: tasks loaded");
 
@@ -62,7 +60,7 @@ function useTasks() {
     async function syncTaskOrder(updatedTasks) {
 
         for (const task of updatedTasks) {
-            // updating each doc's index one by one
+            // updating each doc's/task's index one by one
             try {
                 const ref = doc(
                     db,
@@ -83,7 +81,13 @@ function useTasks() {
     }
 
     async function addTask(inp) {
-        if (inp.trim() !== "") {
+        if (inp.trim() === "") {
+            return { success: false, message: "Empty Task" }
+        } // .some() -> array method which returns true if at least one elemnet satisfies the condition 
+        else if (tasks.some((task) => task.title.toLowerCase().trim() === inp.toLowerCase().trim())) {
+            return { success: false, message: "Duplicate task" }
+        }
+        else {
 
             setSyncing(true); // state becomes true so shows loading text
 
@@ -135,7 +139,7 @@ function useTasks() {
             console.log("UI: server finished");
 
             setSyncing(false); // stop showing the loading text
-
+            return { success: true, message: "Added task" }
         }
     }
 
