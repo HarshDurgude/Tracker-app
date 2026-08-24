@@ -23,6 +23,7 @@ function App() {
   // and also hooks should run in same order every render, so conditional hooks create problems
 
   const inputRef = useRef(null);
+  // here, useRef lets you directly access a DOM element from your JavaScript code using inputRef.current
 
 
   const {
@@ -56,7 +57,7 @@ function App() {
           className='flex gap-1  *:border-2 *:rounded-md *:py-2 *:px-4' // *: -> used to apply tailwind property to all direct childs
         >
           <input
-            ref={inputRef}
+            ref={inputRef} // pointing the created useRef variable to this dom element
             className='w-64' // approx width based on what looks good
             type="text"
             value={input}
@@ -102,30 +103,19 @@ function App() {
 
       </div>
 
+
+
       {/* this is a pop up code it will show pop up based on the state */}
       {/* this expression is evaluated based on how truthy and falsy value expression work in js*/}
-      {showDuplicateModal && (
+      {showDuplicateModal && ( // fixed inset-0 -> creates the dark bg for the popup 
         <div className="fixed inset-0 flex items-center justify-center bg-black/50">
 
-          <div className="w-72 h-48 rounded-lg bg-white p-4 shadow-xl">
-
-            <h2 className="text-xl font-bold">
-              Duplicate Task
-            </h2>
-
-            <p className="mt-2 text-gray-600">
-              This task already exists and cannot be created again.
-            </p>
-
-            <button
-              onClick={() => { setShowDuplicateModal(false); inputRef.current?.focus(); }}
-              className="mt-5 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-            >
-              OK
-            </button>
-
+          <div className='flex flex-col gap-2 w-72  bg-white rounded-xl p-6 relative'>
+            <h2 className='leading-none text-xl font-bold'>Duplicate Task</h2>
+            <p>This task is already added and duplicate tasks are not allowed!</p>
+            <button onClick={() => { setShowDuplicateModal(false); inputRef.current?.focus(); }} className='leading-none p-1 bg-gray-200 hover:bg-gray-300 rounded-md absolute  top-3 right-3'>X</button>
+            <button onClick={() => { setShowDuplicateModal(false); inputRef.current?.focus(); }} className='p-1.5 rounded-md bg-blue-400 hover:bg-blue-500'>Okay</button>
           </div>
-
         </div>
       )}
     </>
