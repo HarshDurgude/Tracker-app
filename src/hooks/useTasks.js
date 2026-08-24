@@ -13,14 +13,18 @@ import {
     orderBy
 } from "firebase/firestore";
 
-function useTasks() {
+function useTasks(user) {
     const [tasks, setTasks] = useState([]); // state for tasks list
     const [dropped, setDropped] = useState(); // fixing animation glich with this
     const [syncing, setSyncing] = useState(false); // for simulating the syncing state
 
     useEffect(() => {
+
+        if (!user) return;
+
         loadTasks();
-    }, [])
+
+    }, [user]);
     // calling loadtasks() in useeffect so it runs on the start after the render and 
     // [] --> (dependancy array) makes sure it only runs once after initial render
 
@@ -31,11 +35,13 @@ function useTasks() {
 
         // database query could be unpredictable, so using try-catch
         try {
-            const q = query( // using query and orderby func to get things in order by index 
+
+            const q = query(// using query and orderby func to get things in order by index 
                 // beacuse firestore doesnt store elements in order
-                collection(db, "tasks"),
+                collection(db, "users", user.uid, "tasks"),
                 orderBy("index")
             );
+
             // using await cause database query takes time 
             const querySnapshot = await getDocs(q); // this returns a querySnapshot
             // querySnapshot.docs contains the array which has our all task list data, in order
@@ -64,9 +70,11 @@ function useTasks() {
             try {
                 const ref = doc(
                     db,
+                    "users",
+                    user.uid,
                     "tasks",
                     task.id
-                );
+                )
                 await updateDoc(ref, {
                     index: task.index
                 });
@@ -119,7 +127,13 @@ function useTasks() {
                 // before we used addDoc but it didnt allow giving our own firebaseId so we
                 // are using seDoc() so we can give our id so same copy stays on local & cloud
                 const docRef = await setDoc(
-                    doc(db, "tasks", id),
+                    doc(
+                        db,
+                        "users",
+                        user.uid,
+                        "tasks",
+                        id
+                    ),
                     newTask
                 );
                 // await used here so next code doesnt execute without this executing first
@@ -161,7 +175,13 @@ function useTasks() {
 
         // DB SYNC
         try {
-            const ref = doc(db, "tasks", id);
+            const ref = doc(
+                db,
+                "users",
+                user.uid,
+                "tasks",
+                id
+            );
             await deleteDoc(ref);
         } catch (err) {
             console.log("Err : " + err);
@@ -185,7 +205,13 @@ function useTasks() {
         // DB SYNC
         try {
 
-            const ref = doc(db, "tasks", id);
+            const ref = doc(
+                db,
+                "users",
+                user.uid,
+                "tasks",
+                id
+            );
             await updateDoc(ref, { status: newStatus })
         } catch (err) {
             console.log("ERR : " + err);

@@ -1,6 +1,7 @@
 import React from 'react'
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities";
+
 function TaskItem({ task, toggleTask, deleteTask, dropped }) {
     const {
         attributes,
@@ -32,7 +33,7 @@ function TaskItem({ task, toggleTask, deleteTask, dropped }) {
                     ::
                 </div>
                 <button
-                    className='border-2 px-0.5 m-1 rounded-sm hover:bg-red-200'
+                    className='border-2 px-0.5 m-1 rounded-sm bg-red-200 hover:bg-red-400'
                     onClick={() => deleteTask(task.id)}
                 // in react event handlers we need to pass a arrow func and call our func itside it because calling 
                 // our func directly will execute it immediately when component renders

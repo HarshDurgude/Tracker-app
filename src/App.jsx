@@ -3,6 +3,8 @@ import React from 'react'
 import { useRef } from "react";
 import './App.css'
 
+
+
 // dnd imports
 import {
   SortableContext,
@@ -13,11 +15,17 @@ import {
 } from "@dnd-kit/core";
 
 // custom hooks and components
+import Login from "./components/Login";
 import TaskItem from './components/TaskItem';
 import useTasks from './hooks/useTasks';
+import useAuth from './hooks/useAuth';
 import { log } from 'firebase/firestore/pipelines';
 
 function App() {
+
+
+
+
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [input, setInput] = useState(""); // this runs at every render of App but only sets value to "" at the first render other times it uses the state
   // and also hooks should run in same order every render, so conditional hooks create problems
@@ -26,6 +34,7 @@ function App() {
   // here, useRef lets you directly access a DOM element from your JavaScript code using inputRef.current
 
 
+  const { user, loading, logout } = useAuth(); // custom hook created for handling auth
   const {
     tasks,
     dropped,
@@ -35,12 +44,36 @@ function App() {
     toggleTask,
     handleDragEnd,
     handleDragStart
-  } = useTasks(); // custom hook created to handle all task related logic
+  } = useTasks(user); // custom hook created to handle all task related logic
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
 
 
   return (
     <>
-      <div className='m-4 flex flex-col items-center'>
+      <div className='m-4 flex flex-col  items-center'>
+
+        <div className='flex justify-between w-80 ' >
+          <div className='text-xl font-bold leading-none py-2'
+          >Today's Tasks</div>
+          <div>
+            <button className='bg-blue-300 border-2 hover:bg-blue-400 rounded-sm px-1 py-0.5 m-1 text-sm'
+            >Archives</button>
+            <button onClick={logout} className='bg-gray-300 border-2 hover:bg-red-300 rounded-sm px-1 py-0.5 m-1 text-sm'
+            >Logout</button>
+          </div>
+        </div>
+
         {/* made the div into form and moved add task logic to onsubmit, so that pressing enter also creates the task in todo list */}
         <form // made the callback function async because needed to use await here
           onSubmit={async (e) => {
