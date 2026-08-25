@@ -15,13 +15,6 @@ function useAuth() {
 
         const unsubscribe = onAuthStateChanged(auth, (user) => {
 
-            // if (user) {
-            //     console.log("AUTH: USER LOGGED IN");
-            //     console.log("AUTH: UID =", user.uid);
-            //     console.log("AUTH: EMAIL =", user.email);
-            // } else {
-            //     console.log("AUTH: NO USER");
-            // }
 
             setUser(user);
             setLoading(false);

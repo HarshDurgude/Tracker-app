@@ -35,6 +35,7 @@ function App() {
 
 
   const { user, loading, logout } = useAuth(); // custom hook created for handling auth
+
   const {
     tasks,
     dropped,

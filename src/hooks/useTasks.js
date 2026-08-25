@@ -20,13 +20,24 @@ function useTasks(user) {
 
     useEffect(() => {
 
-        if (!user) return;
+        if (!user) return; // so that loadtasks doesnt run when not logged in
 
         loadTasks();
 
-    }, [user]);
+    }, [user]); // now whenever the state of user changes this useeffect will run
     // calling loadtasks() in useeffect so it runs on the start after the render and 
-    // [] --> (dependancy array) makes sure it only runs once after initial render
+    // [] --> (dependancy array) empty makes sure it only runs once after initial render
+
+
+    function getTodayDate() {
+        const today = new Date();
+
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
+    }
 
     // for loading all tasks initially
     async function loadTasks() {
@@ -49,7 +60,21 @@ function useTasks(user) {
             // function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields, 
             // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
 
-            const loadedTasks = querySnapshot.docs.map((doc) => (doc.data())); // getting tasks into the local variable from firebase one by one using map
+
+            const todayDate = getTodayDate(); // today's date
+
+            const loadedTasks = querySnapshot.docs.reduce((filteredTasks, doc) => {
+                if (doc.data().status && doc.data().completedDate !== todayDate) {
+                    archiveTask(doc.data());
+                    console.log("call archive task here");
+
+                } else {
+
+                    filteredTasks.push(doc.data());
+                }
+                return filteredTasks;
+            }, []); // getting tasks from firebase then filtering them based on today's date one by one using reduce
+            // and then storing them into a local variable
 
             setTasks(loadedTasks); // updating the tasks state variable
 
@@ -60,6 +85,35 @@ function useTasks(user) {
 
         }
         console.log("LOADING: Firebase responded");
+    }
+
+    async function archiveTask(task) {
+        try {
+            // adding the task to the archives
+            await setDoc(
+                doc(
+                    db,
+                    "users",
+                    user.uid,
+                    "archives",
+                    task.id
+                ),
+                task
+            );
+
+            // deleting the task from the main tasks
+            const deleteRef = doc(
+                db,
+                "users",
+                user.uid,
+                "tasks",
+                task.id
+            );
+            await deleteDoc(deleteRef);
+
+        } catch (error) {
+            console.log(error);
+        }
     }
 
     // syncs task order indexes whenever we rearrange tasks with drag and drop or delete 
@@ -111,7 +165,8 @@ function useTasks(user) {
                 id,
                 title: inp,
                 status: false,
-                index: tasks.length
+                index: tasks.length,
+                completedDate: null
             };
             console.log("UI: updating instantly");
 
@@ -125,7 +180,7 @@ function useTasks(user) {
             try {
 
                 // before we used addDoc but it didnt allow giving our own firebaseId so we
-                // are using seDoc() so we can give our id so same copy stays on local & cloud
+                // are using setDoc() so we can give our id so same copy stays on local & cloud
                 const docRef = await setDoc(
                     doc(
                         db,
@@ -199,7 +254,8 @@ function useTasks(user) {
             t => t.id === id
         );
         const newStatus = !task.status;
-        setTasks((prev) => prev.map((t) => (t.id === id) ? { ...t, status: newStatus } : t));
+        const completedDate = newStatus ? getTodayDate() : null;
+        setTasks((prev) => prev.map((t) => (t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t));
         // chnages the status of task, for checkboxes
 
         // DB SYNC
@@ -212,7 +268,7 @@ function useTasks(user) {
                 "tasks",
                 id
             );
-            await updateDoc(ref, { status: newStatus })
+            await updateDoc(ref, { status: newStatus, completedDate: completedDate })
         } catch (err) {
             console.log("ERR : " + err);
 
