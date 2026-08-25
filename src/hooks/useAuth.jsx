@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import {
     onAuthStateChanged,
     signOut
@@ -6,7 +6,12 @@ import {
 import { auth } from "../services/firebase";
 
 
-function useAuth() {
+// 1. Create the Context
+export const AuthContext = createContext(null);
+
+
+// 2. Provider: owns and provides the authentication state
+export function AuthProvider({ children }) {
 
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -15,9 +20,9 @@ function useAuth() {
 
         const unsubscribe = onAuthStateChanged(auth, (user) => {
 
-
             setUser(user);
             setLoading(false);
+
         });
 
         return unsubscribe;
@@ -40,7 +45,20 @@ function useAuth() {
         }
     }
 
-    return { user, loading, logout };
+
+    return (
+        <AuthContext.Provider value={{ user, loading, logout }}>
+            {children}
+        </AuthContext.Provider>
+    );
+}
+
+
+// 3. Custom hook: gives components access to the Context
+function useAuth() {
+
+    return useContext(AuthContext);
+
 }
 
 export default useAuth;
