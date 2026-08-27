@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import { db } from "../services/firebase";
 import {
@@ -13,13 +13,20 @@ import {
 } from "firebase/firestore";
 
 function useTasks(user) {
+    const archiveStarted = useRef(false);
     const [tasks, setTasks] = useState([]); // state for tasks list
+    const [expiredTasks, setExpiredTasks] = useState([]);
+
     const [dropped, setDropped] = useState(); // fixing animation glich with this
     const [syncing, setSyncing] = useState(false); // for simulating the syncing state
 
     useEffect(() => {
 
-        if (!user) return; // so that loadtasks doesnt run when not logged in
+        if (!user) return;
+
+        if (archiveStarted.current) return;
+
+        archiveStarted.current = true;
 
         loadTasks();
 
@@ -27,6 +34,33 @@ function useTasks(user) {
     // calling loadtasks() in useeffect so it runs on the start after the render and 
     // [] --> (dependancy array) empty makes sure it only runs once after initial render
 
+    useEffect(() => {
+
+        if (expiredTasks.length === 0) return;
+
+        cleanupExpiredTasks();
+
+    }, [expiredTasks]);
+
+    async function cleanupExpiredTasks() {
+
+        for (const task of expiredTasks) {
+
+            const success = await archiveTaskToFirebase(task);
+
+            if (!success) {
+                continue;
+            }
+
+            await deleteTaskFromFirebase(task.id);
+
+        }
+        await syncTaskOrderFirebase(tasks);
+
+        console.log("Cleanup Done!!!");
+
+
+    }
 
     function getTodayDate() {
         const today = new Date();
@@ -60,22 +94,25 @@ function useTasks(user) {
             // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
 
 
-            const todayDate = getTodayDate(); // today's date
+            // const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
+            const todayDate = "2026-08-28";
 
-            const loadedTasks = querySnapshot.docs.reduce((filteredTasks, doc) => {
-                if (doc.data().status && doc.data().completedDate !== todayDate) {
-                    archiveTask(doc.data());
-                    console.log("call archive task here");
+            const loadedTasks = querySnapshot.docs.map(doc => doc.data());
 
-                } else {
+            const expiredTasks = loadedTasks.filter(task => task.status && task.completedDate !== todayDate);
 
-                    filteredTasks.push(doc.data());
-                }
-                return filteredTasks;
-            }, []); // getting tasks from firebase then filtering them based on today's date one by one using reduce
-            // and then storing them into a local variable
 
-            setTasks(loadedTasks); // updating the tasks state variable
+            const activeTasks = loadedTasks
+                .filter(task => !expiredTasks.includes(task))
+                .map((task, index) => ({
+                    ...task,
+                    index
+                }));
+
+            setTasks(activeTasks);
+            setExpiredTasks(expiredTasks);
+
+
 
             console.log("LOADING: tasks loaded");
 
@@ -86,7 +123,9 @@ function useTasks(user) {
         console.log("LOADING: Firebase responded");
     }
 
-    async function archiveTask(task) {
+    async function archiveTaskToFirebase(task) {
+
+
         try {
             // adding the task to the archives
             await setDoc(
@@ -100,23 +139,18 @@ function useTasks(user) {
                 task
             );
 
-            // deleting the task from the main tasks
-            const deleteRef = doc(
-                db,
-                "users",
-                user.uid,
-                "tasks",
-                task.id
-            );
-            await deleteDoc(deleteRef);
+            return true;
 
         } catch (error) {
             console.log(error);
+            return false;
         }
     }
 
     // syncs task order indexes whenever we rearrange tasks with drag and drop or delete 
-    async function syncTaskOrder(updatedTasks) {
+    async function syncTaskOrderFirebase(updatedTasks) {
+
+        console.log("started syncTaskOrder()");
 
         for (const task of updatedTasks) {
             // updating each doc's/task's index one by one
@@ -138,6 +172,8 @@ function useTasks(user) {
             }
 
         }
+
+        console.log("finished syncTaskOrder()");
 
     }
 
@@ -211,22 +247,8 @@ function useTasks(user) {
         }
     }
 
-    async function deleteTask(id) {
 
-        if (!id) return; // only delete if firebase id exists
-
-        // LOCAL UI UPDATE
-        const deleted = tasks.filter((task, i) => (task.id !== id));
-        // react prefers creating new arrays instead of modifiying old ones for state change
-        // filter creates new array
-
-        const updatedDelete = deleted.map((task, index) => ({
-            ...task,
-            index
-        }))
-
-        setTasks(updatedDelete);
-
+    async function deleteTaskFromFirebase(id) {
         // DB SYNC
         try {
             const ref = doc(
@@ -240,7 +262,31 @@ function useTasks(user) {
         } catch (err) {
             console.log("Err : " + err);
         }
-        syncTaskOrder(updatedDelete);
+    }
+
+    function deleteTask(id) {
+
+        if (!id) return; // only delete if firebase id exists
+
+
+        // LOCAL UI UPDATE
+        const nonDeleted = tasks.filter((task, i) => (task.id !== id));
+        // react prefers creating new arrays instead of modifiying old ones for state change
+        // filter creates new array
+
+
+        const updatedAfterDelete = nonDeleted.map((task, index) => ({
+            ...task,
+            index
+        }))
+
+        setTasks(updatedAfterDelete);
+
+
+        deleteTaskFromFirebase(id);
+
+        syncTaskOrderFirebase(updatedAfterDelete);
+
 
     }
 
@@ -287,7 +333,7 @@ function useTasks(user) {
         setTasks(updatedReorder);
 
         // DB SYNC
-        syncTaskOrder(updatedReorder);
+        syncTaskOrderFirebase(updatedReorder);
 
         // reordering the array according to the drag and drop positions
         setDropped(true);

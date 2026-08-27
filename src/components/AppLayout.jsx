@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, Outlet } from "react-router";
+import { NavLink, Outlet } from "react-router";
 import useAuth from "../hooks/useAuth";
 
 function AppLayout() {
@@ -12,27 +12,33 @@ function AppLayout() {
     return (
         <div className="m-4 flex flex-col items-center">
 
-            <div className="flex justify-between w-80">
+            <div className="flex justify-between w-80 ">
 
-                <div className="text-xl font-bold leading-none py-2">
-                    Today's Tasks
-                </div>
+                <NavLink to="/" className={({ isActive }) => (
+                    `inline-flex font-bold items-center justify-center rounded-sm px-1 border-2  m-1 text-xl leading-none ${isActive ? "border-white" : "border-black hover:bg-gray-300"}`
+                )}>
+                    Tasks
+                </NavLink>
 
                 <div className="">
-
-                    <Link
+                    {/* border-[oklch(0.64_0_0)] */}
+                    <NavLink
                         to="/archive"
-                        className={`${commonButtonStyle} bg-blue-300 hover:bg-blue-400`}
+                        className={({ isActive }) => (
+                            `${commonButtonStyle}  bg-blue-300 hover:bg-blue-400 ${isActive ? "border-[oklch(0.64_0_0)]" : "border-black"} `
+                        )}
                     >
                         Archives
-                    </Link>
+                    </NavLink>
 
-                    <button
-                        onClick={logout}
-                        className={`${commonButtonStyle} bg-gray-300 hover:bg-red-300`}
+                    <NavLink
+                        to="/settings"
+                        className={({ isActive }) => (
+                            `${commonButtonStyle}  bg-gray-300 hover:bg-red-300 ${isActive ? "border-[oklch(0.64_0_0)]" : "border-black"} `
+                        )}
                     >
-                        Logout
-                    </button>
+                        Settings
+                    </NavLink>
 
                 </div>
 

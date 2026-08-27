@@ -3,15 +3,15 @@ import { createRoot } from 'react-dom/client'
 
 import './App.css'
 import App from './App.jsx'
-import { BrowserRouter } from "react-router";
+import { HashRouter } from "react-router";
 import { AuthProvider } from "./hooks/useAuth.jsx";
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter basename="/Tracker-app">
+    <HashRouter>
       <AuthProvider>
         <App />
       </AuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   </StrictMode>,
 )

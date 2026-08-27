@@ -1,7 +1,8 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router";
 import Tasks from "./pages/Tasks";
-import Archive from "./pages/Archive";
+import Archives from "./pages/Archives";
+import Settings from "./pages/Settings";
 import useAuth from "./hooks/useAuth";
 import Login from "./components/Login";
 import AppLayout from "./components/AppLayout";
@@ -75,10 +76,13 @@ function App() {
       >
 
         {/* Main Tasks page */}
-        <Route index element={<Tasks />} />
+        <Route index path='/' element={<Tasks />} />
 
         {/* Archive page */}
-        <Route path="archive" element={<Archive />} />
+        <Route path="archive" element={<Archives />} />
+
+        {/* Settings page */}
+        <Route path="settings" element={<Settings />} />
 
       </Route>
 
