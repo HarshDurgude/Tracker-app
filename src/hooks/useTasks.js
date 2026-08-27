@@ -13,9 +13,8 @@ import {
 } from "firebase/firestore";
 
 function useTasks(user) {
-    const archiveStarted = useRef(false);
     const [tasks, setTasks] = useState([]); // state for tasks list
-    const [expiredTasks, setExpiredTasks] = useState([]);
+    const [pendingMaintenance, setPendingMaintenance] = useState(null);
 
     const [dropped, setDropped] = useState(); // fixing animation glich with this
     const [syncing, setSyncing] = useState(false); // for simulating the syncing state
@@ -24,9 +23,6 @@ function useTasks(user) {
 
         if (!user) return;
 
-        if (archiveStarted.current) return;
-
-        archiveStarted.current = true;
 
         loadTasks();
 
@@ -34,16 +30,23 @@ function useTasks(user) {
     // calling loadtasks() in useeffect so it runs on the start after the render and 
     // [] --> (dependancy array) empty makes sure it only runs once after initial render
 
-    useEffect(() => {
+    useEffect(() => { // this is reponsible for the cleanup and index sync of the firebase db when either 
+        // archive, some firebase querry fails
+        if (!pendingMaintenance) return;
 
-        if (expiredTasks.length === 0) return;
+        console.log("started useeffect");
 
-        cleanupExpiredTasks();
 
-    }, [expiredTasks]);
+        cleanupFirebase();
 
-    async function cleanupExpiredTasks() {
+    }, [pendingMaintenance]);
 
+
+    async function cleanupFirebase() {
+
+        const { expiredTasks, needsIndexSync } = pendingMaintenance;
+
+        // First archive and delete expired tasks
         for (const task of expiredTasks) {
 
             const success = await archiveTaskToFirebase(task);
@@ -53,11 +56,15 @@ function useTasks(user) {
             }
 
             await deleteTaskFromFirebase(task.id);
-
         }
-        await syncTaskOrderFirebase(tasks);
 
-        console.log("Cleanup Done!!!");
+        // Then fix indexes if necessary
+        if (needsIndexSync || expiredTasks.length > 0) {
+
+            await syncTaskOrderFirebase(tasks);
+        }
+
+        setPendingMaintenance(null);
 
 
     }
@@ -80,6 +87,8 @@ function useTasks(user) {
         // database query could be unpredictable, so using try-catch
         try {
 
+
+
             const q = query(// using query and orderby func to get things in order by index 
                 // beacuse firestore doesnt store elements in order
                 collection(db, "users", user.uid, "tasks"),
@@ -94,10 +103,21 @@ function useTasks(user) {
             // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
 
 
-            // const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
-            const todayDate = "2026-08-28";
+            const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
+            // const todayDate = "2026-08-28";
 
-            const loadedTasks = querySnapshot.docs.map(doc => doc.data());
+
+            let indexMismatch = false;
+
+            const loadedTasks = querySnapshot.docs.map((docSnap, ind) => {
+                const task = docSnap.data();
+                if (task.index !== ind) {
+                    indexMismatch = true; // if index Mismatch is occured then that means last syncTaskOrderFirebase()
+                    // didnt perform properly
+                }
+                return { ...task, index: ind }
+            });
+
 
             const expiredTasks = loadedTasks.filter(task => task.status && task.completedDate !== todayDate);
 
@@ -110,20 +130,27 @@ function useTasks(user) {
                 }));
 
             setTasks(activeTasks);
-            setExpiredTasks(expiredTasks);
+
+            setPendingMaintenance({
+                expiredTasks,
+                needsIndexSync: indexMismatch
+            });
 
 
 
             console.log("LOADING: tasks loaded");
 
-        } catch (err) {
-            console.log("LOAD ERROR:", err);
 
+
+        } catch (err) {
+            console.error("LOAD ERROR:", err);
+            console.error("STACK:", err.stack);
         }
         console.log("LOADING: Firebase responded");
     }
 
     async function archiveTaskToFirebase(task) {
+        console.log(">>> ARCHIVE START", task);
 
 
         try {
@@ -150,10 +177,14 @@ function useTasks(user) {
     // syncs task order indexes whenever we rearrange tasks with drag and drop or delete 
     async function syncTaskOrderFirebase(updatedTasks) {
 
-        console.log("started syncTaskOrder()");
+        console.log(">>> SYNC START", updatedTasks);
+
+
 
         for (const task of updatedTasks) {
             // updating each doc's/task's index one by one
+
+
             try {
                 const ref = doc(
                     db,
@@ -173,7 +204,7 @@ function useTasks(user) {
 
         }
 
-        console.log("finished syncTaskOrder()");
+
 
     }
 
@@ -249,6 +280,7 @@ function useTasks(user) {
 
 
     async function deleteTaskFromFirebase(id) {
+        console.log(">>> DELETE START", id);
         // DB SYNC
         try {
             const ref = doc(
@@ -270,18 +302,16 @@ function useTasks(user) {
 
 
         // LOCAL UI UPDATE
-        const nonDeleted = tasks.filter((task, i) => (task.id !== id));
+        const updatedAfterDelete = tasks
+            .filter((task) => (task.id !== id))
+            .map((task, index) => ({
+                ...task,
+                index
+            }));
         // react prefers creating new arrays instead of modifiying old ones for state change
         // filter creates new array
 
-
-        const updatedAfterDelete = nonDeleted.map((task, index) => ({
-            ...task,
-            index
-        }))
-
         setTasks(updatedAfterDelete);
-
 
         deleteTaskFromFirebase(id);
 
