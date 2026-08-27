@@ -44,7 +44,7 @@ function Tasks() {
         toggleTask,
         handleDragEnd,
         handleDragStart
-    } = useTasks(user); // custom hook created to handle all task related logic
+    } = useTasks(user, "tasks"); // custom hook created to handle all task related logic
 
 
 

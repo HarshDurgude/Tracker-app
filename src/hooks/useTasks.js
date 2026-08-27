@@ -9,10 +9,11 @@ import {
     deleteDoc,
     doc,
     query,
-    orderBy
+    orderBy,
+    getCountFromServer
 } from "firebase/firestore";
 
-function useTasks(user) {
+function useTasks(user, list) {
     const [tasks, setTasks] = useState([]); // state for tasks list
     const [pendingMaintenance, setPendingMaintenance] = useState(null);
 
@@ -25,8 +26,8 @@ function useTasks(user) {
 
 
         loadTasks();
+    }, [user])
 
-    }, [user]); // now whenever the state of user changes this useeffect will run
     // calling loadtasks() in useeffect so it runs on the start after the render and 
     // [] --> (dependancy array) empty makes sure it only runs once after initial render
 
@@ -41,34 +42,6 @@ function useTasks(user) {
 
     }, [pendingMaintenance]);
 
-
-    async function cleanupFirebase() {
-
-        const { expiredTasks, needsIndexSync } = pendingMaintenance;
-
-        // First archive and delete expired tasks
-        for (const task of expiredTasks) {
-
-            const success = await archiveTaskToFirebase(task);
-
-            if (!success) {
-                continue;
-            }
-
-            await deleteTaskFromFirebase(task.id);
-        }
-
-        // Then fix indexes if necessary
-        if (needsIndexSync || expiredTasks.length > 0) {
-
-            await syncTaskOrderFirebase(tasks);
-        }
-
-        setPendingMaintenance(null);
-
-
-    }
-
     function getTodayDate() {
         const today = new Date();
 
@@ -79,6 +52,43 @@ function useTasks(user) {
         return `${year}-${month}-${day}`;
     }
 
+
+    function prepareTasksAndMaintenance(querySnapshot) {
+        // const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
+        const todayDate = "2026-08-28";
+
+
+        let indexMismatch = false;
+
+        const loadedTasks = querySnapshot.docs.map((docSnap, ind) => {
+            const task = docSnap.data();
+            if (task.index !== ind) {
+                indexMismatch = true; // if index Mismatch is occured then that means last syncTaskOrderFirebase()
+                // didnt perform properly
+            }
+            return { ...task, index: ind }
+        });
+
+
+        const expiredTasks = loadedTasks.filter(task => task.status && task.completedDate !== todayDate);
+
+
+        const activeTasks = loadedTasks
+            .filter(task => !expiredTasks.includes(task))
+            .map((task, index) => ({
+                ...task,
+                index
+            }));
+
+
+        setPendingMaintenance({
+            expiredTasks,
+            needsIndexSync: indexMismatch
+        });
+
+        return activeTasks;
+    }
+
     // for loading all tasks initially
     async function loadTasks() {
 
@@ -87,11 +97,9 @@ function useTasks(user) {
         // database query could be unpredictable, so using try-catch
         try {
 
-
-
             const q = query(// using query and orderby func to get things in order by index 
                 // beacuse firestore doesnt store elements in order
-                collection(db, "users", user.uid, "tasks"),
+                collection(db, "users", user.uid, list),
                 orderBy("index")
             );
 
@@ -103,40 +111,9 @@ function useTasks(user) {
             // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
 
 
-            const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
-            // const todayDate = "2026-08-28";
-
-
-            let indexMismatch = false;
-
-            const loadedTasks = querySnapshot.docs.map((docSnap, ind) => {
-                const task = docSnap.data();
-                if (task.index !== ind) {
-                    indexMismatch = true; // if index Mismatch is occured then that means last syncTaskOrderFirebase()
-                    // didnt perform properly
-                }
-                return { ...task, index: ind }
-            });
-
-
-            const expiredTasks = loadedTasks.filter(task => task.status && task.completedDate !== todayDate);
-
-
-            const activeTasks = loadedTasks
-                .filter(task => !expiredTasks.includes(task))
-                .map((task, index) => ({
-                    ...task,
-                    index
-                }));
+            const activeTasks = (list === "tasks") ? prepareTasksAndMaintenance(querySnapshot) : querySnapshot.docs.map((docSnap) => docSnap.data());
 
             setTasks(activeTasks);
-
-            setPendingMaintenance({
-                expiredTasks,
-                needsIndexSync: indexMismatch
-            });
-
-
 
             console.log("LOADING: tasks loaded");
 
@@ -147,65 +124,6 @@ function useTasks(user) {
             console.error("STACK:", err.stack);
         }
         console.log("LOADING: Firebase responded");
-    }
-
-    async function archiveTaskToFirebase(task) {
-        console.log(">>> ARCHIVE START", task);
-
-
-        try {
-            // adding the task to the archives
-            await setDoc(
-                doc(
-                    db,
-                    "users",
-                    user.uid,
-                    "archives",
-                    task.id
-                ),
-                task
-            );
-
-            return true;
-
-        } catch (error) {
-            console.log(error);
-            return false;
-        }
-    }
-
-    // syncs task order indexes whenever we rearrange tasks with drag and drop or delete 
-    async function syncTaskOrderFirebase(updatedTasks) {
-
-        console.log(">>> SYNC START", updatedTasks);
-
-
-
-        for (const task of updatedTasks) {
-            // updating each doc's/task's index one by one
-
-
-            try {
-                const ref = doc(
-                    db,
-                    "users",
-                    user.uid,
-                    "tasks",
-                    task.id
-                )
-                await updateDoc(ref, {
-                    index: task.index
-                });
-
-            } catch (err) {
-                console.log(err);
-
-            }
-
-        }
-
-
-
     }
 
     async function addTask(inp) {
@@ -278,22 +196,77 @@ function useTasks(user) {
         }
     }
 
+    async function toggleTask(id) {
 
-    async function deleteTaskFromFirebase(id) {
-        console.log(">>> DELETE START", id);
-        // DB SYNC
-        try {
-            const ref = doc(
-                db,
-                "users",
-                user.uid,
-                "tasks",
-                id
-            );
-            await deleteDoc(ref);
-        } catch (err) {
-            console.log("Err : " + err);
+        if (!id) return; // only toggle if firebase id exists
+
+        // LOCAL UI UPDATE
+        const task = tasks.find(
+            t => t.id === id
+        );
+        const newStatus = !task.status;
+        const completedDate = newStatus ? getTodayDate() : null;
+        const stateBeforeToggle = tasks;
+        setTasks((prev) => prev.map((t) => (t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t));
+        // chnages the status of task, for checkboxes
+
+        if (list === "tasks") {
+            // DB SYNC
+            try {
+
+                const ref = doc(
+                    db,
+                    "users",
+                    user.uid,
+                    list,
+                    id
+                );
+                await updateDoc(ref, { status: newStatus, completedDate: completedDate })
+            } catch (err) {
+                console.log("ERR : " + err);
+
+            }
+        } else {
+            try {
+
+                const tasksRef = collection(
+                    db,
+                    "users",
+                    user.uid,
+                    "tasks"
+                );
+
+                const snapshot = await getCountFromServer(tasksRef);
+
+                const taskCount = snapshot.data().count;
+
+
+                // before we used addDoc but it didnt allow giving our own firebaseId so we
+                // are using setDoc() so we can give our id so same copy stays on local & cloud
+                const docRef = await setDoc(
+                    doc(
+                        db,
+                        "users",
+                        user.uid,
+                        "tasks",
+                        id
+                    ),
+                    { ...task, status: false, completedDate: null, index: taskCount }
+                );
+                // await used here so next code doesnt execute without this executing first
+
+                deleteTask(id);
+
+            }
+            catch (err) {
+                // rollback if adding doesnt work
+                setTasks(stateBeforeToggle);
+                console.log("ERROR:", err);
+
+            }
         }
+
+
     }
 
     function deleteTask(id) {
@@ -320,36 +293,125 @@ function useTasks(user) {
 
     }
 
-    async function toggleTask(id) {
-
-        if (!id) return; // only toggle if firebase id exists
-
-        // LOCAL UI UPDATE
-        const task = tasks.find(
-            t => t.id === id
-        );
-        const newStatus = !task.status;
-        const completedDate = newStatus ? getTodayDate() : null;
-        setTasks((prev) => prev.map((t) => (t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t));
-        // chnages the status of task, for checkboxes
-
+    async function deleteTaskFromFirebase(id) {
+        console.log(">>> DELETE START", id);
         // DB SYNC
         try {
-
             const ref = doc(
                 db,
                 "users",
                 user.uid,
-                "tasks",
+                list,
                 id
             );
-            await updateDoc(ref, { status: newStatus, completedDate: completedDate })
+            await deleteDoc(ref);
         } catch (err) {
-            console.log("ERR : " + err);
+            console.log("Err : " + err);
+        }
+    }
+
+
+    async function cleanupFirebase() {
+
+        const { expiredTasks, needsIndexSync } = pendingMaintenance;
+
+        // First archive and delete expired tasks
+        for (const task of expiredTasks) {
+
+            const success = await archiveTaskToFirebase(task);
+
+            if (!success) {
+                continue;
+            }
+
+            await deleteTaskFromFirebase(task.id);
+        }
+
+        // Then fix indexes if necessary
+        if (needsIndexSync || expiredTasks.length > 0) {
+
+            await syncTaskOrderFirebase(tasks);
+        }
+
+        setPendingMaintenance(null);
+
+
+    }
+
+    async function archiveTaskToFirebase(task) {
+        console.log(">>> ARCHIVE START", task);
+
+
+        try {
+
+            const tasksRef = collection(
+                db,
+                "users",
+                user.uid,
+                "archives"
+            );
+
+            const snapshot = await getCountFromServer(tasksRef);
+
+            const archiveCount = snapshot.data().count;
+
+
+
+
+            // adding the task to the archives
+            await setDoc(
+                doc(
+                    db,
+                    "users",
+                    user.uid,
+                    "archives",
+                    task.id
+                ),
+                { ...task, index: archiveCount }
+            );
+
+            return true;
+
+        } catch (error) {
+            console.log(error);
+            return false;
+        }
+    }
+
+    // syncs task order indexes whenever we rearrange tasks with drag and drop or delete 
+    async function syncTaskOrderFirebase(updatedTasks) {
+
+        console.log(">>> SYNC START", updatedTasks);
+
+
+
+        for (const task of updatedTasks) {
+            // updating each doc's/task's index one by one
+
+
+            try {
+                const ref = doc(
+                    db,
+                    "users",
+                    user.uid,
+                    list,
+                    task.id
+                )
+                await updateDoc(ref, {
+                    index: task.index
+                });
+
+            } catch (err) {
+                console.log(err);
+
+            }
 
         }
 
+
+
     }
+
 
     function handleDragEnd(event) {
 

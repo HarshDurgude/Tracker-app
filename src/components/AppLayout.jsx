@@ -4,7 +4,7 @@ import useAuth from "../hooks/useAuth";
 
 function AppLayout() {
 
-    const { logout } = useAuth();
+
 
     const commonButtonStyle =
         "inline-flex items-center justify-center border-2 rounded-sm p-1  m-1 text-sm leading-none";
