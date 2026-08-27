@@ -54,8 +54,8 @@ function useTasks(user, list) {
 
 
     function prepareTasksAndMaintenance(querySnapshot) {
-        // const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
-        const todayDate = "2026-08-28";
+        const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
+        // const todayDate = "2026-08-28";
 
 
         let indexMismatch = false;
