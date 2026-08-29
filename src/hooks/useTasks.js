@@ -129,6 +129,9 @@ function useTasks(user, list) {
     }
 
     async function addTask(inp) {
+        console.log("addtask started");
+
+
         if (inp.trim() === "") {
             return { success: false, message: "Empty Task" }
         } // .some() -> array method which returns true if at least one elemnet satisfies the condition 

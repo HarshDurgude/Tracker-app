@@ -14,6 +14,7 @@ function AppLayout() {
 
             <div className="flex justify-between w-80 ">
 
+                {/* NavLink gives isActive param to know when a page is active to use css accprding to that */}
                 <NavLink to="/" className={({ isActive }) => (
                     `inline-flex font-bold items-center justify-center rounded-sm px-1 border-2  m-1 text-xl leading-none ${isActive ? "border-white" : "border-black hover:bg-gray-300"}`
                 )}>

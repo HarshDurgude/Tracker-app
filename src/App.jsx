@@ -6,6 +6,7 @@ import Settings from "./pages/Settings";
 import useAuth from "./hooks/useAuth";
 import Login from "./components/Login";
 import AppLayout from "./components/AppLayout";
+import { useOnlineStatus } from "./hooks/useOnlineStatus";
 
 
 // Protects pages that require a logged-in user
@@ -34,6 +35,8 @@ function PublicRoute({ children }) {
 
   const { user, loading } = useAuth();
 
+
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -51,42 +54,57 @@ function PublicRoute({ children }) {
 
 
 function App() {
+  const isOnline = useOnlineStatus();
 
   return (
-    <Routes>
+    <>
+      <Routes>
 
-      {/* Login is only for logged-out users */}
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        }
-      />
+        {/* Login is only for logged-out users */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
 
 
-      {/* Everything here requires login */}
-      <Route
-        element={
-          <ProtectedRoute>
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
+        {/* Everything here requires login */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        >
 
-        {/* Main Tasks page */}
-        <Route index path='/' element={<Tasks />} />
+          {/* Main Tasks page */}
+          <Route index path='/' element={<Tasks />} />
 
-        {/* Archive page */}
-        <Route path="archive" element={<Archives />} />
+          {/* Archive page */}
+          <Route path="archive" element={<Archives />} />
 
-        {/* Settings page */}
-        <Route path="settings" element={<Settings />} />
+          {/* Settings page */}
+          <Route path="settings" element={<Settings />} />
 
-      </Route>
+        </Route>
 
-    </Routes>
+      </Routes>
+
+      {/* toast msg which shows when user is offline */}
+      {isOnline === false && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg p-6 max-w-xs text-center shadow-2xl border border-gray-200">
+            <p className="text-gray-800 font-bold text-base">You are Offline!!!</p>
+            <p className="text-sm text-gray-800">Please turn on internet.</p>
+          </div>
+        </div>
+      )}
+
+
+    </>
   );
 }
 
