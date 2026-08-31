@@ -11,12 +11,12 @@ import {
     getCountFromServer,
 } from "firebase/firestore";
 
-export async function fetchUserCollection(uid, collectionName) {
+export async function fetchUserCollection(uid, collectionName, reverse) {
 
     const q = query(// using query and orderby func to get things in order by index 
         // beacuse firestore doesnt store elements in order
         collection(db, "users", uid, collectionName),
-        orderBy("index")
+        (reverse === 1) ? orderBy("index", "desc") : orderBy("index")
     );
     return await getDocs(q); // this returns a querySnapshot
 }

@@ -23,18 +23,19 @@ function useTasks(user, collectionName) {
             // database query could be unpredictable, so using try-catch
             try {
 
-                const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName);
                 // querySnapshot.docs contains the array which has our all task list data, in order
                 // to access that data each element in querySnapshot.docs has a 
                 // function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields, 
                 // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
 
                 if (collectionName === "tasks") {
+                    const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName, 0);
                     const { activeTasks, pendingMaintenance } = utils.prepareTasksAndMaintenance(querySnapshot);
                     setPendingMaintenance(pendingMaintenance);
                     setTasks(activeTasks);
                 } else {
-                    setTasks(querySnapshot.docs.map((docSnap) => docSnap.data()));
+                    const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName, 1);
+                    setTasks(querySnapshot.docs.map((docSnap, index) => ({ ...docSnap.data(), index })));
                 }
             } catch (err) {
                 console.error("LOAD ERROR:", err);
@@ -151,9 +152,24 @@ function useTasks(user, collectionName) {
         setTasks(updatedAfterDelete);
 
         await firebaseService.deleteTaskDoc(user.uid, collectionName, id);
-        await firebaseService.batchSyncIndexes(user.uid, collectionName, updatedAfterDelete);
+        // await firebaseService.batchSyncIndexes(user.uid, collectionName, updatedAfterDelete);
+
+        if (collectionName === "archives") {
+
+            firebaseService.batchSyncIndexes(user.uid, collectionName, updatedAfterDelete.map((task, index) => ({
+                ...task,
+                index: updatedReorder.length - 1 - index
+            })));
+        } else {
+
+            firebaseService.batchSyncIndexes(user.uid, collectionName, updatedAfterDelete);
+        }
 
     }
+
+
+
+
 
     function handleDragEnd(event) {
 
@@ -167,7 +183,16 @@ function useTasks(user, collectionName) {
         setTasks(updatedReorder);
 
         // DB SYNC
-        firebaseService.batchSyncIndexes(user.uid, collectionName, updatedReorder);
+        if (collectionName === "archives") {
+
+            firebaseService.batchSyncIndexes(user.uid, collectionName, updatedReorder.map((task, index) => ({
+                ...task,
+                index: updatedReorder.length - 1 - index
+            })));
+        } else {
+
+            firebaseService.batchSyncIndexes(user.uid, collectionName, updatedReorder);
+        }
 
         // reordering the array according to the drag and drop positions
         setDropped(true);
