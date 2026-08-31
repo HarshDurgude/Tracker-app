@@ -22,8 +22,8 @@ function useTasks(user, collectionName) {
 
             // database query could be unpredictable, so using try-catch
             try {
-
-                const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName);
+                const sortOrder = collectionName === "archives" ? "desc" : "asc";
+                const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName, sortOrder);
                 // querySnapshot.docs contains the array which has our all task list data, in order
                 // to access that data each element in querySnapshot.docs has a 
                 // function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields, 
@@ -151,8 +151,16 @@ function useTasks(user, collectionName) {
         setTasks(updatedAfterDelete);
 
         await firebaseService.deleteTaskDoc(user.uid, collectionName, id);
-        await firebaseService.batchSyncIndexes(user.uid, collectionName, updatedAfterDelete);
 
+        if (collectionName === "archives") {
+            const invertedTasks = updatedAfterDelete.map((task, index) => ({
+                ...task,
+                index: updatedAfterDelete.length - 1 - index,
+            }));
+            await firebaseService.batchSyncIndexes(user.uid, collectionName, invertedTasks);
+        } else {
+            await firebaseService.batchSyncIndexes(user.uid, collectionName, updatedAfterDelete);
+        }
     }
 
     function handleDragEnd(event) {
@@ -167,7 +175,15 @@ function useTasks(user, collectionName) {
         setTasks(updatedReorder);
 
         // DB SYNC
-        firebaseService.batchSyncIndexes(user.uid, collectionName, updatedReorder);
+        if (collectionName === "archives") {
+            const invertedTasks = updatedReorder.map((task, index) => ({
+                ...task,
+                index: updatedReorder.length - 1 - index,
+            }));
+            firebaseService.batchSyncIndexes(user.uid, collectionName, invertedTasks);
+        } else {
+            firebaseService.batchSyncIndexes(user.uid, collectionName, updatedReorder);
+        }
 
         // reordering the array according to the drag and drop positions
         setDropped(true);
