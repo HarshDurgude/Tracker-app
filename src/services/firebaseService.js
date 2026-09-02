@@ -9,6 +9,7 @@ import {
     query,
     orderBy,
     getCountFromServer,
+    writeBatch
 } from "firebase/firestore";
 
 export async function fetchUserCollection(uid, collectionName, sortOrder = "asc") {
@@ -45,11 +46,16 @@ export async function deleteTaskDoc(uid, collectionName, taskId) {
 }
 
 export async function batchSyncIndexes(uid, collectionName, tasks) {
+
+    if (tasks.length === 0) return; // no need to go to db if no tasks at all
+
+    const batch = writeBatch(db);
+
     for (const task of tasks) {
-        try {
-            await updateTaskFieldsDoc(uid, collectionName, task.id, { index: task.index });
-        } catch (err) {
-            console.error("Index sync error for task:", task.id, err);
-        }
+        const taskRef = doc(db, "users", uid, collectionName, task.id);
+        batch.update(taskRef, { index: task.index })
     }
+
+    await batch.commit();
+
 }
