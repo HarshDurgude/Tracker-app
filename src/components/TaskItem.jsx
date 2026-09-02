@@ -2,7 +2,7 @@ import React from 'react'
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities";
 
-function TaskItem({ task, toggleTask, deleteTask, dropped }) {
+function TaskItem({ task, toggleTask, deleteTask, dropped, last }) {
     const {
         attributes,
         listeners,
@@ -14,15 +14,17 @@ function TaskItem({ task, toggleTask, deleteTask, dropped }) {
     const style = { // handles dragging, movement and translate animation using dynamic css
         transform: CSS.Transform.toString(transform),
         transition: dropped ? "none" : transition, // workaround to fix the gitter/glich
+
     };
     return (
         <div
 
             ref={setNodeRef} // marking this div as dragable and telling that to dnd kit
             style={style}
+
         >
 
-            <div className='flex  gap-2 items-center' >
+            <div className='flex  gap-2 items-center  ' >
                 <div
                     className="p-1 bg-gray-100 rounded-sm touch-none hover:bg-gray-200 hover:cursor-pointer"
                     // for making this div the drag control point

@@ -62,18 +62,6 @@ function useTasks(user, collectionName) {
                 console.log(e);
 
             }
-            // First archive and delete expired tasks
-            // for (const task of expiredTasks) {
-
-            //     try {
-            //         // add task to archive
-            //         await firebaseService.addTaskDoc(user.uid, "archives", { ...task, index: archiveCount });
-            //         // delete expired tasks
-            //         await firebaseService.deleteTaskDoc(user.uid, "tasks", task.id);
-            //     } catch (e) {
-            //         console.error("Archive failed for task:", task.id, e);
-            //     }
-            // }
 
             // Then fix indexes if necessary
             if (needsIndexSync || expiredTasks.length > 0) {
@@ -172,16 +160,25 @@ function useTasks(user, collectionName) {
 
     function handleDragEnd(event) {
 
+        if (!event.over || event.active.id === event.over.id) {
+            setDropped(true);
+            return;
+            // handling the case of dropped at the same position and dropping
+            // below the last element
+        }
+
         // LOCAL UI UPDATE
         const reordered = arrayMove(tasks, tasks.findIndex(t => t.id === event.active.id), tasks.findIndex(t => t.id === event.over.id));
 
         const updatedReorder = reordered.map((task, index) => ({
             ...task,
             index
-        }))
+        }));
         setTasks(updatedReorder);
 
         // DB SYNC
+
+        // console.log("calling db");
         if (collectionName === "archives") {
             const invertedTasks = updatedReorder.map((task, index) => ({
                 ...task,
@@ -194,6 +191,7 @@ function useTasks(user, collectionName) {
 
         // reordering the array according to the drag and drop positions
         setDropped(true);
+
     }
 
     function handleDragStart() {
