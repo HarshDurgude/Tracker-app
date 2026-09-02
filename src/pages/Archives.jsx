@@ -6,8 +6,10 @@ import {
     arrayMove
 } from "@dnd-kit/sortable";
 import {
-    DndContext,
+    DndContext, closestCenter
 } from "@dnd-kit/core";
+import { restrictToWindowEdges } from "@dnd-kit/modifiers";
+
 
 // custom hooks and components
 
@@ -44,6 +46,9 @@ function Archives() {
             <div className='m-2'>
                 <DndContext // defines the context of drag an drop area
 
+                    modifiers={[restrictToWindowEdges]} // Stops drag preview at screen edge
+                    collisionDetection={closestCenter} // this lets us drag any elemn et below the last element and removes the glitch
+
                     onDragStart={() => { handleDragStart() }}
                     onDragEnd={(event) => { handleDragEnd(event) }}
                 >
@@ -54,6 +59,7 @@ function Archives() {
 
                         {tasks.map((task) => (
                             <TaskItem
+
                                 task={task}
                                 toggleTask={toggleTask}
                                 deleteTask={deleteTask}
