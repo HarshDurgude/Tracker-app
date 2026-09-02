@@ -39,9 +39,8 @@ export function createNewTask(input, taskLength) {
 }
 
 export function prepareTasksAndMaintenance(querySnapshot) {
-    const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
-    // const todayDate = "2026-08-31";
-
+    // const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
+    const todayDate = "2026-09-04";
 
     let indexMismatch = false;
 

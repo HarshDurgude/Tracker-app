@@ -59,3 +59,22 @@ export async function batchSyncIndexes(uid, collectionName, tasks) {
     await batch.commit();
 
 }
+
+export async function archiveExpiredTasksBatch(uid, expiredTasks, archiveCount) {
+    if (expiredTasks.length === 0) return;
+
+    const batch = writeBatch(db);
+
+    expiredTasks.forEach((task, i) => {
+        const archiveRef = doc(db, "users", uid, "archives", task.id);
+        const deleteRef = doc(db, "users", uid, "tasks", task.id);
+
+        batch.set(archiveRef, { ...task, index: archiveCount + i });
+
+        batch.delete(deleteRef);
+    });
+
+    await batch.commit();
+
+
+}

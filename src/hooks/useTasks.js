@@ -47,26 +47,33 @@ function useTasks(user, collectionName) {
     // [] --> (dependancy array) empty makes sure it only runs once after initial render
 
     useEffect(() => { // this is reponsible for the cleanup and index sync of the firebase db when either 
-        // archive, some firebase querry fails
+        // archive or some firebase querry fails
         if (!pendingMaintenance) return;
 
         async function cleanupFirebase() {
 
             const { expiredTasks, needsIndexSync } = pendingMaintenance;
 
-            // First archive and delete expired tasks
-            for (const task of expiredTasks) {
+            try {
+                const archiveCount = await firebaseService.getCollectionCount(user.uid, "archives");
+                await firebaseService.archiveExpiredTasksBatch(user.uid, expiredTasks, archiveCount);
 
-                try {
-                    // add task to archive
-                    const archiveCount = await firebaseService.getCollectionCount(user.uid, "archives");
-                    await firebaseService.addTaskDoc(user.uid, "archives", { ...task, index: archiveCount });
-                    // delete expired tasks
-                    await firebaseService.deleteTaskDoc(user.uid, "tasks", task.id);
-                } catch (e) {
-                    console.error("Archive failed for task:", task.id, e);
-                }
+            } catch (e) {
+                console.log(e);
+
             }
+            // First archive and delete expired tasks
+            // for (const task of expiredTasks) {
+
+            //     try {
+            //         // add task to archive
+            //         await firebaseService.addTaskDoc(user.uid, "archives", { ...task, index: archiveCount });
+            //         // delete expired tasks
+            //         await firebaseService.deleteTaskDoc(user.uid, "tasks", task.id);
+            //     } catch (e) {
+            //         console.error("Archive failed for task:", task.id, e);
+            //     }
+            // }
 
             // Then fix indexes if necessary
             if (needsIndexSync || expiredTasks.length > 0) {
