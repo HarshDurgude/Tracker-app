@@ -1,4 +1,5 @@
 import { db } from "./firebase";
+import { LexoRank } from "lexorank";
 import {
     collection,
     doc,
@@ -8,8 +9,8 @@ import {
     deleteDoc,
     query,
     orderBy,
-    getCountFromServer,
-    writeBatch
+    writeBatch,
+    limit
 } from "firebase/firestore";
 
 export async function fetchUserCollection(uid, collectionName, sortOrder = "asc") {
@@ -17,7 +18,8 @@ export async function fetchUserCollection(uid, collectionName, sortOrder = "asc"
     const q = query(// using query and orderby func to get things in order by index 
         // beacuse firestore doesnt store elements in order
         collection(db, "users", uid, collectionName),
-        orderBy("index", sortOrder)
+        orderBy("index", sortOrder),
+
     );
     return await getDocs(q); // this returns a querySnapshot
 }
@@ -34,42 +36,73 @@ export async function updateTaskFieldsDoc(uid, collectionName, taskId, fields) {
     await updateDoc(ref, fields);
 }
 
-export async function getCollectionCount(uid, collectionName) {
-    const ref = collection(db, "users", uid, collectionName);
-    const snapshot = await getCountFromServer(ref);
-    return snapshot.data().count;
-}
+// export async function getCollectionCount(uid, collectionName) {
+//     const ref = collection(db, "users", uid, collectionName);
+//     const snapshot = await getCountFromServer(ref);
+//     return snapshot.data().count;
+// }
 
 export async function deleteTaskDoc(uid, collectionName, taskId) {
     const ref = doc(db, "users", uid, collectionName, taskId);
     await deleteDoc(ref);
 }
 
-export async function batchSyncIndexes(uid, collectionName, tasks) {
+export async function getLastTaskRank(uid, collectionName) {
 
-    if (tasks.length === 0) return; // no need to go to db if no tasks at all
+    const q = query(
+        collection(db, "users", uid, collectionName),
+        orderBy("index", "desc"),
+        limit(1)
+    );
 
-    const batch = writeBatch(db);
+    const snapshot = await getDocs(q);
 
-    for (const task of tasks) {
-        const taskRef = doc(db, "users", uid, collectionName, task.id);
-        batch.update(taskRef, { index: task.index })
+    if (snapshot.empty) {
+        return null;
     }
 
-    await batch.commit();
-
+    return snapshot.docs[0].data().index;
 }
 
-export async function archiveExpiredTasksBatch(uid, expiredTasks, archiveCount) {
+// export async function batchSyncIndexes(uid, collectionName, tasks) {
+
+//     if (tasks.length === 0) return; // no need to go to db if no tasks at all
+
+//     const batch = writeBatch(db);
+
+//     for (const task of tasks) {
+//         const taskRef = doc(db, "users", uid, collectionName, task.id);
+//         batch.update(taskRef, { index: task.index })
+//     }
+
+//     await batch.commit();
+
+// }
+
+export async function archiveExpiredTasksBatch(uid, expiredTasks, lastArchiveRank) {
     if (expiredTasks.length === 0) return;
 
     const batch = writeBatch(db);
 
+    let currentRank = lastArchiveRank
+        ? LexoRank.parse(lastArchiveRank)
+        : null;
+
+
     expiredTasks.forEach((task, i) => {
+
+        const newRank = currentRank
+            ? currentRank.genNext()
+            : LexoRank.middle();
+
+        currentRank = newRank;
+
         const archiveRef = doc(db, "users", uid, "archives", task.id);
         const deleteRef = doc(db, "users", uid, "tasks", task.id);
 
-        batch.set(archiveRef, { ...task, index: archiveCount + i });
+        batch.set(archiveRef, {
+            ...task, index: newRank.toString()
+        });
 
         batch.delete(deleteRef);
     });

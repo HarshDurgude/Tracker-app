@@ -105,7 +105,8 @@ function Tasks() {
                                 deleteTask={deleteTask}
                                 dropped={dropped}
                                 key={task.id}
-                                last={(i == tasks.length) ? true : false}
+                                collectionName={"tasks"}
+
                             />
                         ))}
 

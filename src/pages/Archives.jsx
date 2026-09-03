@@ -31,8 +31,6 @@ function Archives() {
         dropped,
         deleteTask,
         toggleTask,
-        handleDragEnd,
-        handleDragStart
     } = useTasks(user, "archives"); // custom hook created to handle all task related logic
 
 
@@ -44,35 +42,21 @@ function Archives() {
         <>
             <h1 className="text-lg text-gray-600 mt-0.5 font-bold" >Completed Tasks</h1>
             <div className='m-2'>
-                <DndContext // defines the context of drag an drop area
-
-                    modifiers={[restrictToWindowEdges]} // Stops drag preview at screen edge
-                    collisionDetection={closestCenter} // this lets us drag any elemn et below the last element and removes the glitch
-
-                    onDragStart={() => { handleDragStart() }}
-                    onDragEnd={(event) => { handleDragEnd(event) }}
-                >
-
-                    <SortableContext // defines the items which will be used for drag and drop
-                        items={tasks.map(task => task.id)}
-                    >
-
-                        {tasks.map((task) => (
-                            <TaskItem
-
-                                task={task}
-                                toggleTask={toggleTask}
-                                deleteTask={deleteTask}
-                                dropped={dropped}
-                                key={task.id}
-                            />
-                        ))}
-
-                    </SortableContext>
 
 
+                {tasks.map((task) => (
+                    <TaskItem
 
-                </DndContext>
+                        task={task}
+                        toggleTask={toggleTask}
+                        deleteTask={deleteTask}
+                        dropped={dropped}
+                        key={task.id}
+                        collectionName={"archives"}
+                    />
+                ))}
+
+
             </div>
         </>
     );

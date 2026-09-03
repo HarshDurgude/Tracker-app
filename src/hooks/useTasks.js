@@ -34,7 +34,9 @@ function useTasks(user, collectionName) {
                     setPendingMaintenance(pendingMaintenance);
                     setTasks(activeTasks);
                 } else {
-                    setTasks(querySnapshot.docs.map((docSnap) => docSnap.data()));
+                    const x = querySnapshot.docs.map((docSnap) => docSnap.data());
+                    setTasks(x);
+                    console.log(x);
                 }
             } catch (err) {
                 console.error("LOAD ERROR:", err);
@@ -43,7 +45,7 @@ function useTasks(user, collectionName) {
 
         loadTasks();
     }, [user, collectionName])
-    // calling loadtasks() in useeffect so it runs on the start after the render and 
+    // calling loadtasks() in useeffect so it runs on the start after the render and
     // [] --> (dependancy array) empty makes sure it only runs once after initial render
 
     useEffect(() => { // this is reponsible for the cleanup and index sync of the firebase db when either 
@@ -52,21 +54,24 @@ function useTasks(user, collectionName) {
 
         async function cleanupFirebase() {
 
-            const { expiredTasks, needsIndexSync } = pendingMaintenance;
+            const { expiredTasks } = pendingMaintenance;
 
             try {
-                const archiveCount = await firebaseService.getCollectionCount(user.uid, "archives");
-                await firebaseService.archiveExpiredTasksBatch(user.uid, expiredTasks, archiveCount);
+
+                const lastArchiveRank =
+                    await firebaseService.getLastTaskRank(
+                        user.uid,
+                        "archives"
+                    );
+
+                await firebaseService.archiveExpiredTasksBatch(
+                    user.uid,
+                    expiredTasks,
+                    lastArchiveRank
+                );
 
             } catch (e) {
                 console.log(e);
-
-            }
-
-            // Then fix indexes if necessary
-            if (needsIndexSync || expiredTasks.length > 0) {
-
-                await firebaseService.batchSyncIndexes(user.uid, collectionName, tasks);
             }
 
             setPendingMaintenance(null);
@@ -85,7 +90,9 @@ function useTasks(user, collectionName) {
             setSyncing(true); // state becomes true so shows loading text
 
             // LOCAL UI UPDATE
-            const newTask = utils.createNewTask(inp, tasks.length);
+            // const newTask = utils.createNewTask(inp, tasks.length);
+            const rank = utils.getNextRank(tasks);
+            const newTask = utils.createNewTask(inp, rank);
             setTasks(prev => [...prev, newTask]);
             // ... --> it is called spread oprator, works just as it looks
 
@@ -119,9 +126,22 @@ function useTasks(user, collectionName) {
             if (collectionName === "tasks") {
                 await firebaseService.updateTaskFieldsDoc(user.uid, "tasks", id, { status: newStatus, completedDate: completedDate });
             } else if (collectionName === "archives") {
-                const collectionCount = await firebaseService.getCollectionCount(user.uid, "tasks");
-                await firebaseService.addTaskDoc(user.uid, "tasks", { ...task, status: false, completedDate: null, index: collectionCount });
-                deleteTask(id);
+                // const collectionCount = await firebaseService.getCollectionCount(user.uid, "tasks");
+                // await firebaseService.addTaskDoc(user.uid, "tasks", { ...task, status: false, completedDate: null, index: collectionCount });
+                // deleteTask(id);
+
+                const lastTaskRank = await firebaseService.getLastTaskRank(user.uid, "tasks");
+
+                const newRank = utils.getNextRankFromRank(lastTaskRank);
+
+                await firebaseService.addTaskDoc(user.uid, "tasks",
+                    {
+                        ...task,
+                        status: false,
+                        completedDate: null,
+                        index: newRank
+                    });
+                await deleteTask(id);
             }
         } catch (err) {
             console.log("ERR : " + err);
@@ -130,31 +150,52 @@ function useTasks(user, collectionName) {
 
     }
 
+    // async function deleteTask(id) {
+
+    //     if (!id) return; // only delete if firebase id exists
+
+    //     // LOCAL UI UPDATE
+    //     const updatedAfterDelete = tasks
+    //         .filter((task) => (task.id !== id))
+    //         .map((task, index) => ({
+    //             ...task,
+    //             index
+    //         })); // react prefers creating new arrays instead of modifiying old ones for state change
+    //     // filter creates new array
+
+    //     setTasks(updatedAfterDelete);
+
+    //     await firebaseService.deleteTaskDoc(user.uid, collectionName, id);
+
+    //     if (collectionName === "archives") {
+    //         const invertedTasks = updatedAfterDelete.map((task, index) => ({
+    //             ...task,
+    //             index: updatedAfterDelete.length - 1 - index,
+    //         }));
+    //         await firebaseService.batchSyncIndexes(user.uid, collectionName, invertedTasks);
+    //     } else {
+    //         await firebaseService.batchSyncIndexes(user.uid, collectionName, updatedAfterDelete);
+    //     }
+    // }
+
     async function deleteTask(id) {
 
-        if (!id) return; // only delete if firebase id exists
+        if (!id) return;
 
         // LOCAL UI UPDATE
-        const updatedAfterDelete = tasks
-            .filter((task) => (task.id !== id))
-            .map((task, index) => ({
-                ...task,
-                index
-            })); // react prefers creating new arrays instead of modifiying old ones for state change
-        // filter creates new array
+        setTasks(prev =>
+            prev.filter(task => task.id !== id)
+        );
 
-        setTasks(updatedAfterDelete);
-
-        await firebaseService.deleteTaskDoc(user.uid, collectionName, id);
-
-        if (collectionName === "archives") {
-            const invertedTasks = updatedAfterDelete.map((task, index) => ({
-                ...task,
-                index: updatedAfterDelete.length - 1 - index,
-            }));
-            await firebaseService.batchSyncIndexes(user.uid, collectionName, invertedTasks);
-        } else {
-            await firebaseService.batchSyncIndexes(user.uid, collectionName, updatedAfterDelete);
+        // DB SYNC
+        try {
+            await firebaseService.deleteTaskDoc(
+                user.uid,
+                collectionName,
+                id
+            );
+        } catch (err) {
+            console.log("DELETE ERROR:", err);
         }
     }
 
@@ -168,26 +209,40 @@ function useTasks(user, collectionName) {
         }
 
         // LOCAL UI UPDATE
-        const reordered = arrayMove(tasks, tasks.findIndex(t => t.id === event.active.id), tasks.findIndex(t => t.id === event.over.id));
 
-        const updatedReorder = reordered.map((task, index) => ({
-            ...task,
-            index
-        }));
-        setTasks(updatedReorder);
+        const oldIndex = tasks.findIndex(task => task.id === event.active.id);
 
-        // DB SYNC
+        const newIndex = tasks.findIndex(task => task.id === event.over.id);
 
-        // console.log("calling db");
-        if (collectionName === "archives") {
-            const invertedTasks = updatedReorder.map((task, index) => ({
-                ...task,
-                index: updatedReorder.length - 1 - index,
-            }));
-            firebaseService.batchSyncIndexes(user.uid, collectionName, invertedTasks);
-        } else {
-            firebaseService.batchSyncIndexes(user.uid, collectionName, updatedReorder);
+        const reordered = arrayMove(tasks, oldIndex, newIndex);
+
+        // Calculate rank only for moved task
+        const newRank = utils.calculateDragRank(reordered, newIndex);
+
+        const movedTask = { ...reordered[newIndex], index: newRank };
+
+
+        // replace only moved task
+        reordered[newIndex] = movedTask;
+
+        // LOCAL UI UPDATE
+        setTasks(reordered);
+
+
+        // DB SYNC - only ONE document
+        try {
+            firebaseService.updateTaskFieldsDoc(
+                user.uid,
+                collectionName,
+                movedTask.id,
+                {
+                    index: newRank
+                }
+            );
+        } catch (err) {
+            console.log("DRAG SYNC ERROR:", err);
         }
+
 
         // reordering the array according to the drag and drop positions
         setDropped(true);

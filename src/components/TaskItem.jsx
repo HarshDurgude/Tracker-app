@@ -2,13 +2,14 @@ import React from 'react'
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities";
 
-function TaskItem({ task, toggleTask, deleteTask, dropped, last }) {
+function TaskItem({ task, toggleTask, deleteTask, dropped, collectionName }) {
     const {
         attributes,
         listeners,
         setNodeRef,
         transform,
-        transition
+        transition,
+        isDragging
     } = useSortable({ id: task.id }); // hook which gives diff utilities for drag and drop
 
     const style = { // handles dragging, movement and translate animation using dynamic css
@@ -24,16 +25,16 @@ function TaskItem({ task, toggleTask, deleteTask, dropped, last }) {
 
         >
 
-            <div className='flex  gap-2 items-center  ' >
-                <div
-                    className="p-1 bg-gray-100 rounded-sm touch-none hover:bg-gray-200 hover:cursor-pointer"
+            <div className={`flex gap-1.5 items-center my-1.5  py-0.5 px-1.5 rounded-lg ${isDragging ? "bg-gray-200 shadow-lg" : "bg-gray-100 shadow-sm"}`} >
+                {collectionName === "tasks" && <div
+                    className="leading-none p-1 font-bold bg-gray-300 rounded-sm touch-none  hover:bg-gray-400 hover:cursor-pointer"
                     // for making this div the drag control point
                     {...listeners}
                     // for realiable dragging
                     {...attributes}
                 >
                     ::
-                </div>
+                </div>}
                 <button
                     className='border-2 px-0.5 m-1 rounded-sm bg-red-200 hover:bg-red-400'
                     onClick={() => deleteTask(task.id)}

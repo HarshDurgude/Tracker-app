@@ -1,3 +1,5 @@
+import { LexoRank } from "lexorank";
+
 export function getTodayDate() {
     const today = new Date();
 
@@ -19,7 +21,7 @@ export function validateInput(input, tasks) {
     }
 }
 
-export function createNewTask(input, taskLength) {
+export function createNewTask(input, rankIndex) {
     // creating unique id
     const id =
         Date.now().toString() +
@@ -30,7 +32,7 @@ export function createNewTask(input, taskLength) {
         id,
         title: input,
         status: false,
-        index: taskLength,
+        index: rankIndex,
         completedDate: null
     };
 
@@ -44,31 +46,58 @@ export function prepareTasksAndMaintenance(querySnapshot) {
 
     let indexMismatch = false;
 
-    const loadedTasks = querySnapshot.docs.map((docSnap, ind) => {
-        const task = docSnap.data();
-        if (task.index !== ind) {
-            indexMismatch = true; // if index Mismatch is occured then that means last syncTaskOrderFirebase()
-            // didnt perform properly
-        }
-        return { ...task, index: ind }
-    });
+    // const loadedTasks = querySnapshot.docs.map((docSnap, ind) => {
+    //     const task = docSnap.data();
+    //     if (task.index !== ind) {
+    //         indexMismatch = true; // if index Mismatch is occured then that means last syncTaskOrderFirebase()
+    //         // didnt perform properly
+    //     }
+    //     return { ...task, index: ind }
+    // });
+
+    const loadedTasks = querySnapshot.docs.map((docSnap) => docSnap.data());
 
 
     const expiredTasks = loadedTasks.filter(task => task.status && task.completedDate !== todayDate);
 
 
-    const activeTasks = loadedTasks
-        .filter(task => !expiredTasks.includes(task))
-        .map((task, index) => ({
-            ...task,
-            index
-        }));
+    const activeTasks = loadedTasks.filter(task => !expiredTasks.includes(task));
 
     return {
         activeTasks, pendingMaintenance: {
-            expiredTasks,
-            needsIndexSync: indexMismatch
+            expiredTasks
         }
     };
 }
 
+
+export function getNextRank(tasks) {
+    if (!tasks || tasks.length === 0) return LexoRank.middle().toString();
+    const lastTask = tasks[tasks.length - 1];
+    return LexoRank.parse(lastTask.index).genNext().toString();
+}
+
+export function calculateDragRank(reorderedTasks, targetIndex) {
+    const prevTask = reorderedTasks[targetIndex - 1];
+    const nextTask = reorderedTasks[targetIndex + 1];
+
+    if (!prevTask && !nextTask) return LexoRank.middle().toString();
+    if (!prevTask) return LexoRank.parse(nextTask.index).genPrev().toString();
+    if (!nextTask) return LexoRank.parse(prevTask.index).genNext().toString();
+
+    return LexoRank.parse(prevTask.index)
+        .between(LexoRank.parse(nextTask.index))
+        .toString();
+}
+
+export function getNextRankFromRank(lastRank) {
+
+    if (!lastRank) {
+        return LexoRank.middle().toString();
+    }
+
+    return LexoRank
+        .parse(lastRank)
+        .genNext()
+        .toString();
+}
