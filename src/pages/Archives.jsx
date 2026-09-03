@@ -1,16 +1,4 @@
 
-
-// dnd imports
-import {
-    SortableContext,
-    arrayMove
-} from "@dnd-kit/sortable";
-import {
-    DndContext, closestCenter
-} from "@dnd-kit/core";
-import { restrictToWindowEdges } from "@dnd-kit/modifiers";
-
-
 // custom hooks and components
 
 import TaskItem from '../components/TaskItem';
@@ -24,17 +12,12 @@ function Archives() {
 
     const { user } = useAuth(); // custom hook created for handling auth
 
-
-
     const {
         tasks,
         dropped,
         deleteTask,
         toggleTask,
     } = useTasks(user, "archives"); // custom hook created to handle all task related logic
-
-
-
 
 
     return (

@@ -36,19 +36,40 @@ export async function updateTaskFieldsDoc(uid, collectionName, taskId, fields) {
     await updateDoc(ref, fields);
 }
 
-// export async function getCollectionCount(uid, collectionName) {
-//     const ref = collection(db, "users", uid, collectionName);
-//     const snapshot = await getCountFromServer(ref);
-//     return snapshot.data().count;
-// }
 
 export async function deleteTaskDoc(uid, collectionName, taskId) {
     const ref = doc(db, "users", uid, collectionName, taskId);
     await deleteDoc(ref);
 }
 
-export async function getLastTaskRank(uid, collectionName) {
 
+export async function archiveExpiredTasksBatch(uid, expiredTasks, nextIndex) {
+    if (expiredTasks.length === 0) return;
+
+    const batch = writeBatch(db);
+
+    let rank = LexoRank.parse(nextIndex);
+
+
+    expiredTasks.forEach((task) => {
+
+        const archiveRef = doc(db, "users", uid, "archives", task.id);
+        const deleteRef = doc(db, "users", uid, "tasks", task.id);
+
+        batch.set(archiveRef, {
+            ...task, index: rank.toString()
+        });
+
+        batch.delete(deleteRef);
+
+        rank = rank.genNext();
+    });
+
+    await batch.commit();
+
+}
+
+export async function getNextIndex(uid, collectionName) {
     const q = query(
         collection(db, "users", uid, collectionName),
         orderBy("index", "desc"),
@@ -58,56 +79,12 @@ export async function getLastTaskRank(uid, collectionName) {
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-        return null;
+        return LexoRank.middle().toString();
     }
 
-    return snapshot.docs[0].data().index;
-}
+    const lastTask = snapshot.docs[0].data();
 
-// export async function batchSyncIndexes(uid, collectionName, tasks) {
-
-//     if (tasks.length === 0) return; // no need to go to db if no tasks at all
-
-//     const batch = writeBatch(db);
-
-//     for (const task of tasks) {
-//         const taskRef = doc(db, "users", uid, collectionName, task.id);
-//         batch.update(taskRef, { index: task.index })
-//     }
-
-//     await batch.commit();
-
-// }
-
-export async function archiveExpiredTasksBatch(uid, expiredTasks, lastArchiveRank) {
-    if (expiredTasks.length === 0) return;
-
-    const batch = writeBatch(db);
-
-    let currentRank = lastArchiveRank
-        ? LexoRank.parse(lastArchiveRank)
-        : null;
-
-
-    expiredTasks.forEach((task, i) => {
-
-        const newRank = currentRank
-            ? currentRank.genNext()
-            : LexoRank.middle();
-
-        currentRank = newRank;
-
-        const archiveRef = doc(db, "users", uid, "archives", task.id);
-        const deleteRef = doc(db, "users", uid, "tasks", task.id);
-
-        batch.set(archiveRef, {
-            ...task, index: newRank.toString()
-        });
-
-        batch.delete(deleteRef);
-    });
-
-    await batch.commit();
-
-
+    return LexoRank.parse(lastTask.index)
+        .genNext()
+        .toString();
 }
