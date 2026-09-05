@@ -46,7 +46,7 @@ export async function prepareTasksAndMaintenance(uid, querySnapshot, collectionN
 
     if (collectionName === "tasks") {
         const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
-        // const todayDate = "2026-09-15";
+        // const todayDate = "2026-09-18";
 
         const loadedTasks = querySnapshot.docs.map((docSnap) => docSnap.data());
 
@@ -64,13 +64,10 @@ export async function prepareTasksAndMaintenance(uid, querySnapshot, collectionN
         };
     } else {
         const activeTasks = querySnapshot.docs.map((docSnap) => docSnap.data());
-        let page_Boundaries;
-        if (!pageBoundaries.lastPage) {
-            const archiveCount = await getColletionCount(uid, collectionName);
-            page_Boundaries = { first: querySnapshot.docs[0], last: querySnapshot.docs[querySnapshot.docs.length - 1], lastPage: Math.ceil(archiveCount / LAZY_TASKS) }
-        } else {
-            page_Boundaries = { ...pageBoundaries, first: querySnapshot.docs[0], last: querySnapshot.docs[querySnapshot.docs.length - 1] };
-        }
+
+        const archiveCount = await getColletionCount(uid, collectionName);
+        const page_Boundaries = { first: querySnapshot.docs[0], last: querySnapshot.docs[querySnapshot.docs.length - 1], lastPage: Math.ceil(archiveCount / LAZY_TASKS) }
+
 
 
         return {

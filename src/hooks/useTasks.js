@@ -23,9 +23,9 @@ function useTasks(user, collectionName) {
 
         if (!user || (pageBoundaries.first && pageBoundaries.last)) return;
 
-        if (!pageBoundaries.first && !pageBoundaries.last) {
+        if ((!pageBoundaries.first && !pageBoundaries.last) && collectionName === "archives") {
             setPage(1);
-            setPageBoundaries(prev => ({ ...prev, lastPage: false }))
+            // setPageBoundaries(prev => ({ ...prev, lastPage: false }))
         }
 
         // for loading all tasks initially
