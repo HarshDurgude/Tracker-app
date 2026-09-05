@@ -1,4 +1,6 @@
 import { db } from "./firebase";
+import * as utils from "../utils/taskUtils";
+
 import { LexoRank } from "lexorank";
 import {
     collection,
@@ -10,17 +12,57 @@ import {
     query,
     orderBy,
     writeBatch,
-    limit
+    limit,
+    startAfter,
+    limitToLast,
+    endBefore,
+    getCountFromServer
 } from "firebase/firestore";
 
-export async function fetchUserCollection(uid, collectionName, sortOrder = "asc") {
+export async function getColletionCount(uid, collectionName) {
+    const q = query(
+        collection(db, "users", uid, collectionName)
+    );
+    const snapshot = await getCountFromServer(q);
+
+    return snapshot.data().count;
+}
+
+export async function fetchUserCollection(uid, collectionName, pageBoundaries) {
+
+    let paginationConstraints = [];
+    let sortOrder;
+
+    if (collectionName === "archives") {
+        sortOrder = "desc";
+        if (!pageBoundaries.first && !pageBoundaries.last) {
+            paginationConstraints = [limit(utils.LAZY_TASKS)];
+            console.log("first and last both null");
+
+        } else if (!pageBoundaries.first) {
+
+
+            paginationConstraints = [
+                limit(utils.LAZY_TASKS),
+                startAfter(pageBoundaries.last)
+            ];
+        } else {
+            paginationConstraints = [
+                limitToLast(utils.LAZY_TASKS),
+                endBefore(pageBoundaries.first)
+            ];
+        }
+    } else {
+        sortOrder = "asc";
+    }
 
     const q = query(// using query and orderby func to get things in order by index 
         // beacuse firestore doesnt store elements in order
         collection(db, "users", uid, collectionName),
         orderBy("index", sortOrder),
-
+        ...paginationConstraints
     );
+
     return await getDocs(q); // this returns a querySnapshot
 }
 

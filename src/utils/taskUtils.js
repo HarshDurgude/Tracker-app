@@ -1,4 +1,6 @@
 import { LexoRank } from "lexorank";
+import { getColletionCount } from "../services/firebaseService"
+export const LAZY_TASKS = 8;
 
 export function getTodayDate() {
     const today = new Date();
@@ -40,21 +42,43 @@ export function createNewTask(input, nextIndex) {
 
 }
 
-export function prepareTasksAndMaintenance(querySnapshot) {
-    const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
-    // const todayDate = "2026-09-06";
+export async function prepareTasksAndMaintenance(uid, querySnapshot, collectionName, pageBoundaries) {
 
-    const loadedTasks = querySnapshot.docs.map((docSnap) => docSnap.data());
+    if (collectionName === "tasks") {
+        const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
+        // const todayDate = "2026-09-15";
 
-    const expiredTasks = loadedTasks.filter(task => task.status && task.completedDate !== todayDate);
+        const loadedTasks = querySnapshot.docs.map((docSnap) => docSnap.data());
 
-    const activeTasks = loadedTasks.filter(task => !expiredTasks.includes(task));
+        const expiredTasks = loadedTasks.filter(task => task.status && task.completedDate !== todayDate);
 
-    return {
-        activeTasks, pendingMaintenance: {
-            expiredTasks
+        const activeTasks = loadedTasks.filter(task => !expiredTasks.includes(task));
+
+        return {
+            activeTasks,
+            pendingMaintenance: {
+                expiredTasks
+            },
+            page_Boundaries: { first: 1, last: 1, lastPage: null }
+
+        };
+    } else {
+        const activeTasks = querySnapshot.docs.map((docSnap) => docSnap.data());
+        let page_Boundaries;
+        if (!pageBoundaries.lastPage) {
+            const archiveCount = await getColletionCount(uid, collectionName);
+            page_Boundaries = { first: querySnapshot.docs[0], last: querySnapshot.docs[querySnapshot.docs.length - 1], lastPage: Math.ceil(archiveCount / LAZY_TASKS) }
+        } else {
+            page_Boundaries = { ...pageBoundaries, first: querySnapshot.docs[0], last: querySnapshot.docs[querySnapshot.docs.length - 1] };
         }
-    };
+
+
+        return {
+            activeTasks,
+            pendingMaintenance: null,
+            page_Boundaries
+        }
+    }
 }
 
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
-import * as utils from "../utils/taskUtils"
+import * as utils from "../utils/taskUtils";
 import * as firebaseService from "../services/firebaseService";
 
 
@@ -13,36 +13,46 @@ function useTasks(user, collectionName) {
     const [dropped, setDropped] = useState(); // fixing animation glich with this
     const [syncing, setSyncing] = useState(false); // for simulating the syncing state
 
-    useEffect(() => {
+    const [pageBoundaries, setPageBoundaries] = useState({ first: null, last: null, lastPage: null });
+    const [page, setPage] = useState(1);
 
-        if (!user) return;
+
+    useEffect(() => {
+        console.log(pageBoundaries.first);
+        console.log(pageBoundaries.last);
+
+        if (!user || (pageBoundaries.first && pageBoundaries.last)) return;
+
+        if (!pageBoundaries.first && !pageBoundaries.last) {
+            setPage(1);
+            setPageBoundaries(prev => ({ ...prev, lastPage: false }))
+        }
 
         // for loading all tasks initially
         async function loadTasks() {
 
             // database query could be unpredictable, so using try-catch
             try {
-                const sortOrder = collectionName === "archives" ? "desc" : "asc";
-                const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName, sortOrder);
+
+                const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName, pageBoundaries);
                 // querySnapshot.docs contains the array which has our all task list data, in order
                 // to access that data each element in querySnapshot.docs has a 
                 // function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields, 
                 // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
 
-                if (collectionName === "tasks") {
-                    const { activeTasks, pendingMaintenance } = utils.prepareTasksAndMaintenance(querySnapshot);
-                    setPendingMaintenance(pendingMaintenance);
-                    setTasks(activeTasks);
-                } else {
-                    setTasks(querySnapshot.docs.map((docSnap) => docSnap.data()));
-                }
+
+                const { activeTasks, pendingMaintenance, page_Boundaries } = await utils.prepareTasksAndMaintenance(user.uid, querySnapshot, collectionName, pageBoundaries);
+                setPendingMaintenance(pendingMaintenance);
+                setTasks(activeTasks);
+                setPageBoundaries(page_Boundaries);
+
             } catch (err) {
                 console.error("LOAD ERROR:", err);
             }
         }
 
         loadTasks();
-    }, [user, collectionName])
+    }, [user, collectionName, pageBoundaries])
     // calling loadtasks() in useeffect so it runs on the start after the render and
     // [] --> (dependancy array) empty makes sure it only runs once after initial render
 
@@ -66,6 +76,7 @@ function useTasks(user, collectionName) {
         cleanupFirebase();
 
     }, [pendingMaintenance, user, tasks, collectionName]);
+
 
 
     async function addTask(inp) {
@@ -193,7 +204,7 @@ function useTasks(user, collectionName) {
         setDropped(false);
     }
 
-    return { tasks, dropped, syncing, addTask, deleteTask, toggleTask, handleDragEnd, handleDragStart }
+    return { tasks, dropped, syncing, page, pageBoundaries, addTask, deleteTask, toggleTask, handleDragEnd, handleDragStart, setPageBoundaries, setPage }
 }
 
 export default useTasks;
