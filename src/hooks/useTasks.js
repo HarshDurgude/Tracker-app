@@ -13,20 +13,28 @@ function useTasks(user, collectionName) {
     const [dropped, setDropped] = useState(); // fixing animation glich with this
     const [syncing, setSyncing] = useState(false); // for simulating the syncing state
 
-    const [pageBoundaries, setPageBoundaries] = useState({ first: null, last: null, lastPage: null });
+    const [pageForward, setPageForward] = useState(1);
     const [page, setPage] = useState(1);
-
+    const [pageCache, setPageCache] = useState([]);
+    // const { pageCache, setPageCache } = useArchiveContext([]);
+    // tasks : [...]
+    // first : snapShot
+    // last  : snapShot
+    // 
 
     useEffect(() => {
-        console.log(pageBoundaries.first);
-        console.log(pageBoundaries.last);
+        // console.log(pageBoundaries.first);
+        // console.log(pageBoundaries.last);
+        console.log(pageCache);
 
-        if (!user || (pageBoundaries.first && pageBoundaries.last)) return;
 
-        if (!pageBoundaries.first && !pageBoundaries.last) {
-            setPage(1);
-            setPageBoundaries(prev => ({ ...prev, lastPage: false }))
-        }
+        if (!user || pageForward === null) return;
+        // if (!user || (pageBoundaries.first && pageBoundaries.last)) return;
+
+        // if (!pageBoundaries.first && !pageBoundaries.last) {
+        //     setPage(1);
+        //     // setPageBoundaries(prev => ({ ...prev, lastPage: false }))
+        // }
 
         // for loading all tasks initially
         async function loadTasks() {
@@ -34,17 +42,20 @@ function useTasks(user, collectionName) {
             // database query could be unpredictable, so using try-catch
             try {
 
-                const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName, pageBoundaries);
+                const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName, pageCache, pageForward);
                 // querySnapshot.docs contains the array which has our all task list data, in order
                 // to access that data each element in querySnapshot.docs has a 
                 // function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields, 
                 // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
 
 
-                const { activeTasks, pendingMaintenance, page_Boundaries } = await utils.prepareTasksAndMaintenance(user.uid, querySnapshot, collectionName, pageBoundaries);
+                const { activeTasks, pendingMaintenance, updatedPageCache } = await utils.prepareTasksAndMaintenance(querySnapshot, collectionName, pageCache, pageForward);
                 setPendingMaintenance(pendingMaintenance);
                 setTasks(activeTasks);
-                setPageBoundaries(page_Boundaries);
+                // setPageBoundaries(page_Boundaries);
+                setPageCache(updatedPageCache);
+                // setPage(pageNo);
+                setPageForward(null);
 
             } catch (err) {
                 console.error("LOAD ERROR:", err);
@@ -52,14 +63,27 @@ function useTasks(user, collectionName) {
         }
 
         loadTasks();
-    }, [user, collectionName, pageBoundaries])
+    }, [user, collectionName, pageForward])
     // calling loadtasks() in useeffect so it runs on the start after the render and
     // [] --> (dependancy array) empty makes sure it only runs once after initial render
 
     useEffect(() => { // this is reponsible for the cleanup and index sync of the firebase db when either 
         // archive or some firebase querry fails
+        if (collectionName === "archives") {
+            setPageCache(prev => {
+                console.log("updating cache");
+
+                return prev?.map(p =>
+                    p?.page === page
+                        ? { ...p, tasks: [...tasks] }
+                        : p
+                );
+            });
+        }
+
         if (!pendingMaintenance) return;
 
+        // trying to change cache value when tasks changes by delete or toggle
         async function cleanupFirebase() {
 
             const { expiredTasks } = pendingMaintenance;
@@ -75,8 +99,26 @@ function useTasks(user, collectionName) {
         }
         cleanupFirebase();
 
+
     }, [pendingMaintenance, user, tasks, collectionName]);
 
+    function handleForward() {
+        if (pageCache[page]) {
+            setTasks(pageCache[page].tasks);
+        } else {
+            setPageForward(2);
+        }
+        setPage(prev => prev + 1);
+    }
+    function handleBackword() {
+        if (pageCache[page - 2]) {
+            setTasks(pageCache[page - 2].tasks);
+            setPage(prev => prev - 1);
+        }
+
+        setPageForward(null);
+        // setTasks();
+    }
 
 
     async function addTask(inp) {
@@ -117,7 +159,10 @@ function useTasks(user, collectionName) {
         const task = tasks.find(t => t.id === id);
         const newStatus = !task.status;
         const completedDate = newStatus ? utils.getTodayDate() : null;
-        setTasks((prev) => (prev.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t))));
+        // const updatedTasks = tasks.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t));
+        setTasks(prev => prev.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t)));
+
+
         // changes the status of task, for checkboxes
 
         try {
@@ -204,7 +249,7 @@ function useTasks(user, collectionName) {
         setDropped(false);
     }
 
-    return { tasks, dropped, syncing, page, pageBoundaries, addTask, deleteTask, toggleTask, handleDragEnd, handleDragStart, setPageBoundaries, setPage }
+    return { tasks, dropped, syncing, page, pageCache, addTask, deleteTask, toggleTask, handleDragEnd, handleDragStart, handleForward, handleBackword }
 }
 
 export default useTasks;

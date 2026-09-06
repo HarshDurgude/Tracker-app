@@ -42,51 +42,76 @@ export function createNewTask(input, nextIndex) {
 
 }
 
-export async function prepareTasksAndMaintenance(uid, querySnapshot, collectionName, pageBoundaries) {
+export async function prepareTasksAndMaintenance(querySnapshot, collectionName, pageCache, pageForward) {
 
     if (collectionName === "tasks") {
-        const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day}
-        // const todayDate = "2026-09-15";
+        // const todayDate = getTodayDate(); // today's date -> ${year}-${month}-${day} 
+        const todayDate = "2026-09-10";
 
-        const loadedTasks = querySnapshot.docs.map((docSnap) => docSnap.data());
 
+        const loadedTasks = querySnapshot.docs.map(docSnap => docSnap.data());
         const expiredTasks = loadedTasks.filter(task => task.status && task.completedDate !== todayDate);
-
         const activeTasks = loadedTasks.filter(task => !expiredTasks.includes(task));
 
         return {
             activeTasks,
-            pendingMaintenance: {
-                expiredTasks
-            },
-            page_Boundaries: { first: 1, last: 1, lastPage: null }
-
+            pendingMaintenance: { expiredTasks },
+            updatedPageCache: []
         };
     } else {
-        const activeTasks = querySnapshot.docs.map((docSnap) => docSnap.data());
-        let page_Boundaries;
-        if (!pageBoundaries.lastPage) {
-            const archiveCount = await getColletionCount(uid, collectionName);
-            page_Boundaries = { first: querySnapshot.docs[0], last: querySnapshot.docs[querySnapshot.docs.length - 1], lastPage: Math.ceil(archiveCount / LAZY_TASKS) }
-        } else {
-            page_Boundaries = { ...pageBoundaries, first: querySnapshot.docs[0], last: querySnapshot.docs[querySnapshot.docs.length - 1] };
+
+
+
+        const fetchedTasks = querySnapshot.docs.map(docSnap => docSnap.data());
+        const hasNextPage = fetchedTasks.length === LAZY_TASKS + 1;
+
+        let activeTasks;
+        let newPageCache;
+
+        // FORWARD
+        if (pageForward === 2) {
+            activeTasks = fetchedTasks.slice(0, LAZY_TASKS);
+
+            newPageCache = {
+                tasks: activeTasks,
+                first: querySnapshot.docs[0],
+                last: querySnapshot.docs[LAZY_TASKS - 1],
+                firstPage: false,
+                lastPage: !hasNextPage,
+                page: pageCache[pageCache.length - 1].page + 1
+            };
+        }// BACKWARD
+        else if (pageForward === 1) {
+            activeTasks = fetchedTasks.slice(0, LAZY_TASKS);
+
+            if (hasNextPage) {
+                newPageCache = {
+                    tasks: activeTasks,
+                    first: querySnapshot.docs[0],
+                    last: querySnapshot.docs[LAZY_TASKS - 1],
+                    firstPage: true,
+                    lastPage: false,
+                    page: 1
+                };
+            } else {
+                newPageCache = null;
+            }
         }
 
+        const alreadyCached = newPageCache && pageCache.some(p => p.page === newPageCache.page);
+
+        const updatedPageCache = alreadyCached ? pageCache : newPageCache ? [...pageCache, newPageCache] : pageCache;
 
         return {
             activeTasks,
             pendingMaintenance: null,
-            page_Boundaries
-        }
+            updatedPageCache
+        };
     }
 }
 
 
-export function getNextRank(tasks) {
-    if (!tasks || tasks.length === 0) return LexoRank.middle().toString();
-    const lastTask = tasks[tasks.length - 1];
-    return LexoRank.parse(lastTask.index).genNext().toString();
-}
+
 
 export function calculateDragIndex(reorderedTasks, targetIndex) {
     const prevTask = reorderedTasks[targetIndex - 1];
@@ -98,17 +123,5 @@ export function calculateDragIndex(reorderedTasks, targetIndex) {
 
     return LexoRank.parse(prevTask.index)
         .between(LexoRank.parse(nextTask.index))
-        .toString();
-}
-
-export function getNextRankFromRank(lastRank) {
-
-    if (!lastRank) {
-        return LexoRank.middle().toString();
-    }
-
-    return LexoRank
-        .parse(lastRank)
-        .genNext()
         .toString();
 }
