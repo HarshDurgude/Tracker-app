@@ -16,25 +16,13 @@ function useTasks(user, collectionName) {
     const [pageForward, setPageForward] = useState(1);
     const [page, setPage] = useState(1);
     const [pageCache, setPageCache] = useState([]);
-    // const { pageCache, setPageCache } = useArchiveContext([]);
-    // tasks : [...]
-    // first : snapShot
-    // last  : snapShot
-    // 
+
 
     useEffect(() => {
-        // console.log(pageBoundaries.first);
-        // console.log(pageBoundaries.last);
-        console.log(pageCache);
 
 
         if (!user || pageForward === null) return;
-        // if (!user || (pageBoundaries.first && pageBoundaries.last)) return;
 
-        // if (!pageBoundaries.first && !pageBoundaries.last) {
-        //     setPage(1);
-        //     // setPageBoundaries(prev => ({ ...prev, lastPage: false }))
-        // }
 
         // for loading all tasks initially
         async function loadTasks() {
@@ -161,8 +149,6 @@ function useTasks(user, collectionName) {
         const completedDate = newStatus ? utils.getTodayDate() : null;
         // const updatedTasks = tasks.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t));
         setTasks(prev => prev.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t)));
-
-
         // changes the status of task, for checkboxes
 
         try {
