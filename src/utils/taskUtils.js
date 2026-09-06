@@ -60,8 +60,6 @@ export async function prepareTasksAndMaintenance(querySnapshot, collectionName, 
         };
     } else {
 
-
-
         const fetchedTasks = querySnapshot.docs.map(docSnap => docSnap.data());
         const hasNextPage = fetchedTasks.length === LAZY_TASKS + 1;
 

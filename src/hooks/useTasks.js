@@ -6,6 +6,8 @@ import * as utils from "../utils/taskUtils";
 import * as firebaseService from "../services/firebaseService";
 
 
+//
+
 function useTasks(user, collectionName) {
     const [tasks, setTasks] = useState([]); // state for tasks list
     const [pendingMaintenance, setPendingMaintenance] = useState(null);
@@ -16,25 +18,13 @@ function useTasks(user, collectionName) {
     const [pageForward, setPageForward] = useState(1);
     const [page, setPage] = useState(1);
     const [pageCache, setPageCache] = useState([]);
-    // const { pageCache, setPageCache } = useArchiveContext([]);
-    // tasks : [...]
-    // first : snapShot
-    // last  : snapShot
-    // 
+
 
     useEffect(() => {
-        // console.log(pageBoundaries.first);
-        // console.log(pageBoundaries.last);
-        console.log(pageCache);
 
 
         if (!user || pageForward === null) return;
-        // if (!user || (pageBoundaries.first && pageBoundaries.last)) return;
 
-        // if (!pageBoundaries.first && !pageBoundaries.last) {
-        //     setPage(1);
-        //     // setPageBoundaries(prev => ({ ...prev, lastPage: false }))
-        // }
 
         // for loading all tasks initially
         async function loadTasks() {
@@ -44,8 +34,8 @@ function useTasks(user, collectionName) {
 
                 const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName, pageCache, pageForward);
                 // querySnapshot.docs contains the array which has our all task list data, in order
-                // to access that data each element in querySnapshot.docs has a 
-                // function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields, 
+                // to access that data each element in querySnapshot.docs has a
+                // function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields,
                 // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
 
 
@@ -69,6 +59,8 @@ function useTasks(user, collectionName) {
 
     useEffect(() => { // this is reponsible for the cleanup and index sync of the firebase db when either 
         // archive or some firebase querry fails
+
+        // changing pageCache value value when tasks changes
         if (collectionName === "archives") {
             setPageCache(prev => {
                 console.log("updating cache");
@@ -83,7 +75,6 @@ function useTasks(user, collectionName) {
 
         if (!pendingMaintenance) return;
 
-        // trying to change cache value when tasks changes by delete or toggle
         async function cleanupFirebase() {
 
             const { expiredTasks } = pendingMaintenance;
@@ -161,8 +152,6 @@ function useTasks(user, collectionName) {
         const completedDate = newStatus ? utils.getTodayDate() : null;
         // const updatedTasks = tasks.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t));
         setTasks(prev => prev.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t)));
-
-
         // changes the status of task, for checkboxes
 
         try {
