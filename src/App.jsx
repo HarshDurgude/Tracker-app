@@ -9,6 +9,7 @@ import AppLayout from "./components/AppLayout";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 
 
+
 // Protects pages that require a logged-in user
 function ProtectedRoute({ children }) {
 
@@ -58,6 +59,7 @@ function App() {
 
   return (
     <>
+
       <Routes>
 
         {/* Login is only for logged-out users */}
