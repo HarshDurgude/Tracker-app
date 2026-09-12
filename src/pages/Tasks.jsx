@@ -19,6 +19,7 @@ import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import TaskItem from '../components/TaskItem';
 import useTasks from '../hooks/useTasks';
 import useAuth from '../hooks/useAuth';
+import useDragAndDrop from '../hooks/useDragAndDrop';
 
 function Tasks() {
 
@@ -37,14 +38,16 @@ function Tasks() {
 
     const {
         tasks,
-        dropped,
         syncing,
+        setTasks,
         addTask,
         deleteTask,
         toggleTask,
-        handleDragEnd,
-        handleDragStart
     } = useTasks(user, "tasks"); // custom hook created to handle all task related logic
+
+    const {
+        dropped, handleDragEnd, handleDragStart
+    } = useDragAndDrop(user.uid, tasks, setTasks)
 
 
 

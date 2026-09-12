@@ -1,18 +1,19 @@
 // this is useTasks() hook
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import * as utils from "../utils/taskUtils";
 import * as firebaseService from "../services/firebaseService";
 
 
-//
+
 
 function useTasks(user, collectionName) {
     const [tasks, setTasks] = useState([]); // state for tasks list
+
     const [pendingMaintenance, setPendingMaintenance] = useState(null);
 
-    const [dropped, setDropped] = useState(); // fixing animation glich with this
+
     const [syncing, setSyncing] = useState(false); // for simulating the syncing state
 
     const [pageForward, setPageForward] = useState(1);
@@ -33,11 +34,12 @@ function useTasks(user, collectionName) {
             try {
 
                 const querySnapshot = await firebaseService.fetchUserCollection(user.uid, collectionName, pageCache, pageForward);
-                // querySnapshot.docs contains the array which has our all task list data, in order
-                // to access that data each element in querySnapshot.docs has a
-                // function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields,
-                // eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
-
+                /*  querySnapshot.docs contains
+                    the array which has our all task list data, in order
+                    to access that data each element in querySnapshot.docs has a
+                    function .data(), querySnapshot.docs[0].data() --> (returns one task object containing all data fields,
+                    eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
+                 */
 
                 const { activeTasks, pendingMaintenance, updatedPageCache } = await utils.prepareTasksAndMaintenance(querySnapshot, collectionName, pageCache, pageForward);
                 setPendingMaintenance(pendingMaintenance);
@@ -195,50 +197,9 @@ function useTasks(user, collectionName) {
         }
     }
 
-    function handleDragEnd(event) {
 
-        if (!event.over || event.active.id === event.over.id) {
-            setDropped(true);
-            return;
-            // handling the case of dropped at the same position and dropping
-            // below the last element
-        }
 
-        // LOCAL UI UPDATE
-        // index from where we dragged the task
-        const dragIndex = tasks.findIndex(task => task.id === event.active.id);
-        // index to where we dragged the task
-        const dropIndex = tasks.findIndex(task => task.id === event.over.id);
-        // reordering the array according to drag and drop 
-        const reordered = arrayMove(tasks, dragIndex, dropIndex);
-        // Calculating the new index for dragged task only
-        const calculatedIndex = utils.calculateDragIndex(reordered, dropIndex);
-        // asign that new index to dragged task in reordered array
-        reordered[dropIndex].index = calculatedIndex;
-
-        setTasks(reordered);
-
-        // DB SYNC - only ONE document
-        try {
-            firebaseService.updateTaskFieldsDoc(
-                user.uid,
-                collectionName,
-                reordered[dropIndex].id,
-                { index: calculatedIndex }
-            );
-        } catch (err) {
-            console.log("DRAG SYNC ERROR:", err);
-        }
-
-        setDropped(true);
-
-    }
-
-    function handleDragStart() {
-        setDropped(false);
-    }
-
-    return { tasks, dropped, syncing, page, pageCache, addTask, deleteTask, toggleTask, handleDragEnd, handleDragStart, handleForward, handleBackword }
+    return { tasks, syncing, page, pageCache, setTasks, addTask, deleteTask, toggleTask, handleForward, handleBackword }
 }
 
 export default useTasks;
