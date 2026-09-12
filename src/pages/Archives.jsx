@@ -1,9 +1,12 @@
 
 // custom hooks and components
 
+import { useEffect, useState } from 'react';
+
 import TaskItem from '../components/TaskItem';
 import useTasks from '../hooks/useTasks';
 import useAuth from '../hooks/useAuth';
+import useLoading from '../hooks/useLoading';
 
 
 
@@ -12,16 +15,35 @@ function Archives() {
 
     const { user } = useAuth(); // custom hook created for handling auth
 
+
+    const [page, setPage] = useState(1);
+    const [pageCache, setPageCache] = useState([]);
+
     const {
         tasks,
-        dropped,
-        page,
-        pageCache,
+        setTasks,
         deleteTask,
         toggleTask,
-        handleForward,
-        handleBackword
     } = useTasks(user, "archives"); // custom hook created to handle all task related logic
+
+    const { lazyLoadArchives } = useLoading(user);
+
+
+    useEffect(() => {
+        lazyLoadArchives(pageCache, page, setTasks, setPageCache);
+    }, [user, page]);
+
+    useEffect(() => {
+        setPageCache(prev => {
+            console.log("updating cache");
+
+            return prev.map((p, i) => {
+                if (i === page - 1) {
+                    return { ...p, tasks: tasks }
+                } else { return p }
+            })
+        })
+    }, [tasks]);
 
 
     return (
@@ -37,7 +59,7 @@ function Archives() {
                         task={task}
                         toggleTask={toggleTask}
                         deleteTask={deleteTask}
-                        dropped={dropped}
+                        // dropped={dropped}
                         key={task.id}
                         collectionName={"archives"}
                     />
@@ -45,14 +67,14 @@ function Archives() {
 
 
             </div>
-            {pageCache[0] && <div > page {page}</div >}
+            {(!(page - 1 === 0) || !(pageCache[page - 1]?.isLastPage)) && <div > page {page}</div >}
             <div className='flex gap-3 mt-2'>
-                {pageCache[0] && <>
+                {/* {pageCache[0] && <> */}
 
-                    {!(pageCache[page - 1]?.firstPage) && <button onClick={handleBackword} className='bg-gray-300 font-bold hover:bg-gray-400 p-2 rounded-md leading-none'>{"<"}</button>}
-                    {!(pageCache[page - 1]?.lastPage) && <button onClick={handleForward} className='bg-gray-300 font-bold hover:bg-gray-400 p-2 rounded-md leading-none'>{">"}</button>}
+                {!(page - 1 === 0) && <button onClick={() => setPage((prev) => prev - 1)} className='bg-gray-300 font-bold hover:bg-gray-400 p-2 rounded-md leading-none'>{"<"}</button>}
+                {!(pageCache[page - 1]?.isLastPage) && <button onClick={() => setPage((prev) => prev + 1)} className='bg-gray-300 font-bold hover:bg-gray-400 p-2 rounded-md leading-none'>{">"}</button>}
 
-                </>}
+                {/* </>} */}
             </div >
         </>
     );

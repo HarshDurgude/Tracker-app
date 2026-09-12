@@ -1,8 +1,6 @@
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRef } from "react";
-
-
 
 // dnd imports
 import {
@@ -20,6 +18,7 @@ import TaskItem from '../components/TaskItem';
 import useTasks from '../hooks/useTasks';
 import useAuth from '../hooks/useAuth';
 import useDragAndDrop from '../hooks/useDragAndDrop';
+import useLoading from '../hooks/useLoading';
 
 function Tasks() {
 
@@ -33,12 +32,15 @@ function Tasks() {
     const inputRef = useRef(null);
     // here, useRef lets you directly access a DOM element from your JavaScript code using inputRef.current
 
+    // const [tasks, setTasks] = useState([]); // state for tasks list
+
 
     const { user } = useAuth(); // custom hook created for handling auth
 
     const {
-        tasks,
+
         syncing,
+        tasks,
         setTasks,
         addTask,
         deleteTask,
@@ -46,10 +48,16 @@ function Tasks() {
     } = useTasks(user, "tasks"); // custom hook created to handle all task related logic
 
     const {
-        dropped, handleDragEnd, handleDragStart
-    } = useDragAndDrop(user.uid, tasks, setTasks)
+        dropped,
+        handleDragEnd,
+        handleDragStart
+    } = useDragAndDrop(user.uid, tasks, setTasks);
 
+    const { loadTasks } = useLoading(user, setTasks);
 
+    useEffect(() => {
+        loadTasks(setTasks);
+    }, [user]);
 
 
     return (

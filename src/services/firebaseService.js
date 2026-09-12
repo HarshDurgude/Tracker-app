@@ -26,26 +26,18 @@ export async function getColletionCount(uid, collectionName) {
     return snapshot.data().count;
 }
 
-export async function fetchUserCollection(uid, collectionName, pageCache, pageForward) {
-
-
+export async function fetchUserCollection(uid, collectionName, filters = null) {
     const sortOrder = collectionName === "tasks" ? "asc" : "desc";
     let paginationConstraints = [];
 
-    if (collectionName === "archives") {
 
-        if (pageForward == 2) {
-            paginationConstraints = [
-                limit(utils.LAZY_TASKS + 1),
-                startAfter(pageCache[pageCache.length - 1].last)
-            ];
-        } else if (pageForward == 1) {
-            paginationConstraints = [
-                limit(utils.LAZY_TASKS + 1),
-            ]
+    if (filters) {
+        paginationConstraints.push(limit(filters.limit));
+        if (filters.startAfter) {
+            paginationConstraints.push(startAfter(filters.startAfter));
         }
-    }
 
+    }
 
 
     const q = query(// using query and orderby func to get things in order by index 
