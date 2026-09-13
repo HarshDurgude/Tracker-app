@@ -10,7 +10,7 @@ export default function useDragAndDrop(uid, tasks, setTasks) {
     const [dropped, setDropped] = useState(); // fixing animation glich with this
 
 
-    function handleDragEnd(event) {
+    async function handleDragEnd(event) {
 
         if (!event.over || event.active.id === event.over.id) {
             setDropped(true);
@@ -35,7 +35,7 @@ export default function useDragAndDrop(uid, tasks, setTasks) {
 
         // DB SYNC - only ONE document
         try {
-            firebaseService.updateTaskFieldsDoc(
+            await firebaseService.updateTaskFieldsDoc(
                 uid,
                 "tasks",
                 reordered[dropIndex].id,

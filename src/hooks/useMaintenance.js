@@ -31,8 +31,8 @@ export default function useMaintainance(user, setTasks) {
             eg -> {id: '17790293017838f9bea49f94148', index: 0, title: 'wake up', status: false} )
             */
 
-            // const todayDate = utils.getTodayDate(); // today's date -> ${year}-${month}-${day}
-            const todayDate = "2026-09-15";
+            const todayDate = utils.getTodayDate(); // today's date -> ${year}-${month}-${day}
+            // const todayDate = "2026-09-15";
 
             const loadedTasks = querySnapshot.docs.map(docSnap => docSnap.data());
 

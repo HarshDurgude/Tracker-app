@@ -15,8 +15,12 @@ function TaskItem({ task, toggleTask, deleteTask, dropped, collectionName }) {
     const style = { // handles dragging, movement and translate animation using dynamic css
         transform: CSS.Transform.toString(transform),
         transition: dropped ? "none" : transition, // workaround to fix the gitter/glich
+        // for solving the z-index glitch
+        position: "relative",
+        zIndex: isDragging ? 999 : 0,
 
     };
+
     return (
         <div
 
@@ -25,7 +29,7 @@ function TaskItem({ task, toggleTask, deleteTask, dropped, collectionName }) {
 
         >
 
-            <div className={`flex gap-1.5 items-center my-1.5  py-0.5 px-1.5 rounded-lg ${isDragging ? "bg-gray-200 shadow-lg" : "bg-gray-100 shadow-sm"}`} >
+            <div className={`flex gap-1.5 items-center my-1.5  py-0.5 px-1.5 rounded-lg ${isDragging ? "bg-gray-200 shadow-lg z-100" : "bg-gray-100 shadow-sm"}`} >
                 {collectionName === "tasks" && <div
                     className="leading-none p-1 font-bold bg-gray-300 rounded-sm touch-none  hover:bg-gray-400 hover:cursor-pointer"
                     // for making this div the drag control point
