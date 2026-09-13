@@ -5,8 +5,6 @@ import * as utils from "../utils/taskUtils";
 import * as firebaseService from "../services/firebaseService";
 
 
-
-
 function useTasks(user, collectionName) {
 
     const [tasks, setTasks] = useState([]); // state for tasks list

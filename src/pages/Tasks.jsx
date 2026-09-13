@@ -18,12 +18,11 @@ import TaskItem from '../components/TaskItem';
 import useTasks from '../hooks/useTasks';
 import useAuth from '../hooks/useAuth';
 import useDragAndDrop from '../hooks/useDragAndDrop';
-import useLoading from '../hooks/useLoading';
+import useMaintenance from '../hooks/useMaintenance';
 
 function Tasks() {
 
-
-
+    const { user } = useAuth(); // custom hook created for handling auth
 
     const [showDuplicateModal, setShowDuplicateModal] = useState(false);
     const [input, setInput] = useState(""); // this runs at every render of App but only sets value to "" at the first render other times it uses the state
@@ -32,31 +31,14 @@ function Tasks() {
     const inputRef = useRef(null);
     // here, useRef lets you directly access a DOM element from your JavaScript code using inputRef.current
 
-    // const [tasks, setTasks] = useState([]); // state for tasks list
+    const { syncing, tasks, setTasks, addTask, deleteTask, toggleTask, } = useTasks(user, "tasks"); // custom hook created to handle all task related logic
 
+    const { dropped, handleDragEnd, handleDragStart } = useDragAndDrop(user.uid, tasks, setTasks);
 
-    const { user } = useAuth(); // custom hook created for handling auth
-
-    const {
-
-        syncing,
-        tasks,
-        setTasks,
-        addTask,
-        deleteTask,
-        toggleTask,
-    } = useTasks(user, "tasks"); // custom hook created to handle all task related logic
-
-    const {
-        dropped,
-        handleDragEnd,
-        handleDragStart
-    } = useDragAndDrop(user.uid, tasks, setTasks);
-
-    const { loadTasks } = useLoading(user, setTasks);
+    const { fetching, loadTasks } = useMaintenance(user, setTasks);
 
     useEffect(() => {
-        loadTasks(setTasks);
+        loadTasks();
     }, [user]);
 
 
@@ -95,37 +77,43 @@ function Tasks() {
             <span className='text-xs' // syncing... text
             >{syncing ? "syncing..." : ""}</span>
 
-            <div className='m-2'>
-                <DndContext // defines the context of drag an drop area
-                    modifiers={[restrictToWindowEdges]} // Stops drag preview at screen edge
-                    collisionDetection={closestCenter} // this lets us drag any elemn et below the last element and removes the glitch
-                    onDragStart={() => { handleDragStart() }}
-                    onDragEnd={(event) => { handleDragEnd(event) }}
-                >
-
-                    <SortableContext // defines the items which will be used for drag and drop
-                        items={tasks.map(task => task.id)}
-                        className='flex'
+            {fetching ?
+                (
+                    <div className="min-h-screen flex flex-col items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+                    </div>
+                ) :
+                (<div className='m-2'>
+                    <DndContext // defines the context of drag an drop area
+                        modifiers={[restrictToWindowEdges]} // Stops drag preview at screen edge
+                        collisionDetection={closestCenter} // this lets us drag any elemn et below the last element and removes the glitch
+                        onDragStart={() => { handleDragStart() }}
+                        onDragEnd={(event) => { handleDragEnd(event) }}
                     >
 
-                        {tasks.map((task, i) => (
-                            <TaskItem
-                                task={task}
-                                toggleTask={toggleTask}
-                                deleteTask={deleteTask}
-                                dropped={dropped}
-                                key={task.id}
-                                collectionName={"tasks"}
+                        <SortableContext // defines the items which will be used for drag and drop
+                            items={tasks.map(task => task.id)}
+                            className='flex'
+                        >
 
-                            />
-                        ))}
+                            {tasks.map((task, i) => (
+                                <TaskItem
+                                    task={task}
+                                    toggleTask={toggleTask}
+                                    deleteTask={deleteTask}
+                                    dropped={dropped}
+                                    key={task.id}
+                                    collectionName={"tasks"}
 
-                    </SortableContext>
+                                />
+                            ))}
+
+                        </SortableContext>
 
 
 
-                </DndContext>
-            </div>
+                    </DndContext>
+                </div>)}
 
 
             {/* this is a pop up code it will show pop up based on the state */}
