@@ -1,8 +1,21 @@
 import React from 'react'
-import { useSortable } from "@dnd-kit/sortable"
+import {
+    useSortable,
+    defaultAnimateLayoutChanges
+} from "@dnd-kit/sortable";
+
 import { CSS } from "@dnd-kit/utilities";
 
-function TaskItem({ task, toggleTask, deleteTask, dropped, collectionName }) {
+
+// solves the glitch which we prev used to solve with dropped state
+const animateLayoutChanges = (args) => {
+    if (args.isSorting || args.wasDragging) {
+        return defaultAnimateLayoutChanges(args);
+    }
+
+    return true;
+};
+function TaskItem({ task, toggleTask, deleteTask, collectionName }) {
     const {
         attributes,
         listeners,
@@ -10,11 +23,15 @@ function TaskItem({ task, toggleTask, deleteTask, dropped, collectionName }) {
         transform,
         transition,
         isDragging
-    } = useSortable({ id: task.id }); // hook which gives diff utilities for drag and drop
+    } = useSortable({
+        id: task.id,
+        animateLayoutChanges
+    }); // hook which gives diff utilities for drag and drop
 
     const style = { // handles dragging, movement and translate animation using dynamic css
         transform: CSS.Transform.toString(transform),
-        transition: dropped ? "none" : transition, // workaround to fix the gitter/glich
+        transition: transition?.replace("200ms", "300ms"),
+
         // for solving the z-index glitch
         position: "relative",
         zIndex: isDragging ? 999 : 0,
@@ -26,7 +43,7 @@ function TaskItem({ task, toggleTask, deleteTask, dropped, collectionName }) {
 
             ref={setNodeRef} // marking this div as dragable and telling that to dnd kit
             style={style}
-
+            data-task-id={task.id}
         >
 
             <div className={`flex gap-1.5 items-center my-1.5  py-0.5 px-1.5 rounded-lg ${isDragging ? "bg-gray-200 shadow-lg z-100" : "bg-gray-100 shadow-sm"}`} >
@@ -56,6 +73,7 @@ function TaskItem({ task, toggleTask, deleteTask, dropped, collectionName }) {
                         type="checkbox"
                         checked={task.status}
                         // instead of onclick onChange is recommended for checkboxes
+                        // onChange={() => toggleTask(task.id)}
                         onChange={() => toggleTask(task.id)}
                     />
                 </label>

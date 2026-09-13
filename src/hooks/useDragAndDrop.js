@@ -7,13 +7,12 @@ import { arrayMove } from "@dnd-kit/sortable";
 
 export default function useDragAndDrop(uid, tasks, setTasks) {
 
-    const [dropped, setDropped] = useState(); // fixing animation glich with this
 
 
     async function handleDragEnd(event) {
 
         if (!event.over || event.active.id === event.over.id) {
-            setDropped(true);
+
             return;
             // handling the case of dropped at the same position and dropping
             // below the last element
@@ -45,14 +44,14 @@ export default function useDragAndDrop(uid, tasks, setTasks) {
             console.log("DRAG SYNC ERROR:", err);
         }
 
-        setDropped(true);
+
 
     }
 
     function handleDragStart() {
-        setDropped(false);
+
     }
 
 
-    return { dropped, handleDragEnd, handleDragStart }
+    return { handleDragEnd, handleDragStart }
 }

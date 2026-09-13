@@ -42,8 +42,6 @@ export function createNewTask(input, nextIndex) {
 
 }
 
-
-
 export function calculateDragIndex(reorderedTasks, targetIndex) {
     const prevTask = reorderedTasks[targetIndex - 1];
     const nextTask = reorderedTasks[targetIndex + 1];
@@ -56,3 +54,5 @@ export function calculateDragIndex(reorderedTasks, targetIndex) {
         .between(LexoRank.parse(nextTask.index))
         .toString();
 }
+
+
