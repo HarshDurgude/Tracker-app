@@ -4,8 +4,7 @@ import { useRef } from "react";
 
 // dnd imports
 import {
-    SortableContext,
-    arrayMove
+    SortableContext
 } from "@dnd-kit/sortable";
 import {
     DndContext, closestCenter

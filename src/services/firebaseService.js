@@ -95,7 +95,8 @@ export async function archiveExpiredTasksBatch(uid, expiredTasks, nextIndex) {
 
 }
 
-export async function getNextIndex(uid, collectionName) {
+export async function getNextIndex(uid, collectionName, lastTask = null) {
+
     const q = query(
         collection(db, "users", uid, collectionName),
         orderBy("index", "desc"),
@@ -108,7 +109,7 @@ export async function getNextIndex(uid, collectionName) {
         return LexoRank.middle().toString();
     }
 
-    const lastTask = snapshot.docs[0].data();
+    lastTask = snapshot.docs[0].data();
 
     return LexoRank.parse(lastTask.index)
         .genNext()

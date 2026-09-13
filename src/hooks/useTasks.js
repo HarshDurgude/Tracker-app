@@ -50,9 +50,25 @@ function useTasks(user, collectionName) {
         const task = tasks.find(t => t.id === id);
         const newStatus = !task.status;
         const completedDate = newStatus ? utils.getTodayDate() : null;
-        // const updatedTasks = tasks.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t));
-        setTasks(prev => prev.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t)));
+        // setTasks(prev => prev.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t)));
         // changes the status of task, for checkboxes
+        setTasks(prev => {
+            const updatedTasks = prev.map(task =>
+                task.id === id
+                    ? { ...task, status: newStatus, completedDate }
+                    : task
+            );
+
+            if (newStatus) {
+                const task = updatedTasks.find(task => task.id === id);
+                const otherTasks = updatedTasks.filter(task => task.id !== id);
+
+                return [...otherTasks, task];
+            }
+
+            return updatedTasks;
+        });
+
 
         try {
             if (collectionName === "tasks") {

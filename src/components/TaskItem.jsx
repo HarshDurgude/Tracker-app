@@ -10,17 +10,26 @@ function TaskItem({ task, toggleTask, deleteTask, dropped, collectionName }) {
         transform,
         transition,
         isDragging
-    } = useSortable({ id: task.id }); // hook which gives diff utilities for drag and drop
+    } = useSortable({
+        id: task.id,
+        animateLayoutChanges: () => true
+    }); // hook which gives diff utilities for drag and drop
 
-    const style = { // handles dragging, movement and translate animation using dynamic css
+    // const style = { // handles dragging, movement and translate animation using dynamic css
+    //     transform: CSS.Transform.toString(transform),
+    //     transition: dropped ? "none" : transition, // workaround to fix the gitter/glich
+    //     // for solving the z-index glitch
+    //     position: "relative",
+    //     zIndex: isDragging ? 999 : 0,
+
+    // };
+
+    const style = {
         transform: CSS.Transform.toString(transform),
-        transition: dropped ? "none" : transition, // workaround to fix the gitter/glich
-        // for solving the z-index glitch
+        transition,
         position: "relative",
         zIndex: isDragging ? 999 : 0,
-
     };
-
     return (
         <div
 
