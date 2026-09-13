@@ -7,7 +7,7 @@ import {
     SortableContext
 } from "@dnd-kit/sortable";
 import {
-    DndContext, closestCenter
+    DndContext, closestCenter, MeasuringStrategy
 } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 
@@ -32,9 +32,15 @@ function Tasks() {
 
     const { syncing, tasks, setTasks, addTask, deleteTask, toggleTask, } = useTasks(user, "tasks"); // custom hook created to handle all task related logic
 
-    const { dropped, handleDragEnd, handleDragStart } = useDragAndDrop(user.uid, tasks, setTasks);
+    const { handleDragEnd, handleDragStart } = useDragAndDrop(user.uid, tasks, setTasks);
 
     const { fetching, loadTasks } = useMaintenance(user, setTasks);
+
+    const measuringConfig = {
+        droppable: {
+            strategy: MeasuringStrategy.Always,
+        },
+    };
 
     useEffect(() => {
         loadTasks();
@@ -84,6 +90,7 @@ function Tasks() {
                 ) :
                 (<div className='m-2'>
                     <DndContext // defines the context of drag an drop area
+                        measuring={measuringConfig}
                         modifiers={[restrictToWindowEdges]} // Stops drag preview at screen edge
                         collisionDetection={closestCenter} // this lets us drag any elemn et below the last element and removes the glitch
                         onDragStart={() => { handleDragStart() }}
@@ -100,7 +107,6 @@ function Tasks() {
                                     task={task}
                                     toggleTask={toggleTask}
                                     deleteTask={deleteTask}
-                                    dropped={dropped}
                                     key={task.id}
                                     collectionName={"tasks"}
 

@@ -25,8 +25,10 @@ export async function getColletionCount(uid, collectionName) {
     return snapshot.data().count;
 }
 
-export async function fetchUserCollection(uid, collectionName, filters = null) {
-    const sortOrder = collectionName === "tasks" ? "asc" : "desc";
+export async function fetchUserCollection(uid, collectionName, filters = null, sortOrder = null) {
+    if (!sortOrder) {
+        sortOrder = collectionName === "tasks" ? "asc" : "desc";
+    }
     let paginationConstraints = [];
 
 
@@ -95,7 +97,8 @@ export async function archiveExpiredTasksBatch(uid, expiredTasks, nextIndex) {
 
 }
 
-export async function getNextIndex(uid, collectionName, lastTask = null) {
+export async function getNextIndex(uid, collectionName) {
+
 
     const q = query(
         collection(db, "users", uid, collectionName),
@@ -109,7 +112,7 @@ export async function getNextIndex(uid, collectionName, lastTask = null) {
         return LexoRank.middle().toString();
     }
 
-    lastTask = snapshot.docs[0].data();
+    const lastTask = snapshot.docs[0].data();
 
     return LexoRank.parse(lastTask.index)
         .genNext()

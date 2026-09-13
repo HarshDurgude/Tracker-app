@@ -52,8 +52,10 @@ function useTasks(user, collectionName) {
         const completedDate = newStatus ? utils.getTodayDate() : null;
         // setTasks(prev => prev.map((t) => ((t.id === id) ? { ...t, status: newStatus, completedDate: completedDate } : t)));
         // changes the status of task, for checkboxes
+
+        let updatedTasks;
         setTasks(prev => {
-            const updatedTasks = prev.map(task =>
+            updatedTasks = prev.map(task =>
                 task.id === id
                     ? { ...task, status: newStatus, completedDate }
                     : task
@@ -72,7 +74,8 @@ function useTasks(user, collectionName) {
 
         try {
             if (collectionName === "tasks") {
-                await firebaseService.updateTaskFieldsDoc(user.uid, "tasks", id, { status: newStatus, completedDate: completedDate });
+                const nextInd = await firebaseService.getNextIndex(user.uid, "tasks");
+                await firebaseService.updateTaskFieldsDoc(user.uid, "tasks", id, { status: newStatus, completedDate: completedDate, ...(newStatus ? { index: nextInd } : {}) });
 
             } else if (collectionName === "archives") {
 
