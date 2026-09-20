@@ -8,6 +8,13 @@ import useTasks from '../hooks/useTasks';
 import useAuth from '../hooks/useAuth';
 import useLazyLoad from '../hooks/useLazyLoad';
 
+// dnd imports
+import {
+    SortableContext
+} from "@dnd-kit/sortable";
+import {
+    DndContext, MeasuringStrategy
+} from "@dnd-kit/core";
 
 
 
@@ -18,6 +25,12 @@ function Archives() {
     const { tasks, setTasks, deleteTask, toggleTask, } = useTasks(user, "archives"); // custom hook created to handle all task related logic
 
     const { fetching, pageCache, page, setPage, lazyLoadPage } = useLazyLoad(user, tasks, setTasks);
+
+    const measuringConfig = {
+        droppable: {
+            strategy: MeasuringStrategy.Always,
+        },
+    };
 
     useEffect(() => {
         if (!user) return;
@@ -33,25 +46,38 @@ function Archives() {
 
             {fetching ?
                 (
-                    <div className="min-h-screen flex flex-col items-center justify-center">
+                    <div className="min-h-screen flex flex-col items-center mt-10">
                         <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
                     </div>
                 ) :
                 (<>
                     <div className='m-2'>
 
+                        {/* dndkit used for delete and toggle animations */}
 
-                        {tasks.map((task) => (
-                            <TaskItem
+                        <DndContext // defines the context of drag an drop area
+                            measuring={measuringConfig} // for bringing back good animations by a workaround
+                        >
 
-                                task={task}
-                                toggleTask={toggleTask}
-                                deleteTask={deleteTask}
-                                // dropped={dropped}
-                                key={task.id}
-                                collectionName={"archives"}
-                            />
-                        ))}
+                            <SortableContext // defines the items which will be used for drag and drop
+                                items={tasks.map(task => task.id)}
+                                className='flex'
+                            >
+
+                                {tasks.map((task) => (
+                                    <TaskItem
+                                        task={task}
+                                        toggleTask={toggleTask}
+                                        deleteTask={deleteTask}
+                                        key={task.id}
+                                        collectionName={"archives"}
+
+                                    />
+                                ))}
+
+                            </SortableContext>
+
+                        </DndContext>
 
 
                     </div>

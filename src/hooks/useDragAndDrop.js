@@ -44,8 +44,6 @@ export default function useDragAndDrop(uid, tasks, setTasks) {
             console.log("DRAG SYNC ERROR:", err);
         }
 
-
-
     }
 
     function handleDragStart() {

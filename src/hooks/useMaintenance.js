@@ -32,7 +32,7 @@ export default function useMaintainance(user, setTasks) {
             */
 
             const todayDate = utils.getTodayDate(); // today's date -> ${year}-${month}-${day}
-            // const todayDate = "2026-09-15";
+            // const todayDate = "2026-09-28";
 
             const loadedTasks = querySnapshot.docs.map(docSnap => docSnap.data());
 
